@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>蔵出し処理（完成品支給・戻し）</title>
+  <style>
+    body {
+      font-family: "Noto Sans JP", "Meiryo", sans-serif;
+      background-color: #f4f6f8;
+      margin: 20px;
+      color: #333;
+    }
+    h1 {
+      font-size: 24px;
+      margin-bottom: 20px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background-color: #fff;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    }
+    th, td {
+      padding: 12px;
+      border: 1px solid #ddd;
+      text-align: left;
+      font-size: 14px;
+    }
+    input[type="number"] {
+      width: 80px;
+      padding: 6px;
+    }
+    button {
+      padding: 6px 12px;
+      margin-left: 5px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+  </style>
+</head>
+<body>
+<!-- ナビゲーションバー -->
+<nav style="background-color: #f5f5f5; padding: 10px 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); font-family: 'Noto Sans JP', 'Meiryo', sans-serif; display: flex; flex-direction: column; gap: 10px;">
+  <!-- 1列目 -->
+  <div>
+    <a href="/inventory" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">📦 在庫一覧</a>
+    <a href="/work_schedule" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">📝 作業予定</a>
+    <a href="/shipment" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">🚚 出荷予定</a>
+    <a href="/dispatch" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">📤 蔵出し</a>
+    <a href="/arrival" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">📥 包材入荷</a>
+    <a href="/stock_adjust" style="text-decoration: none; color: #333; font-weight: bold;">🧮 棚卸し</a>
+  </div>
+
+  <!-- 2列目 -->
+  <div>
+    <a href="/master_material" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">🏷 包材マスタ</a>
+    <a href="/master_semi" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">🧩 半完成品マスタ</a>
+    <a href="/master_finished" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">🎯 完成品マスタ</a>
+    <a href="/master_worker" style="text-decoration: none; color: #333; font-weight: bold;">👤 作業者マスタ</a>
+  </div>
+
+  <!-- 3列目 -->
+  <div>
+    <a href="/work_log" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">📂 作業ログ</a>
+    <a href="/stock_adjust_logs" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">🧮 棚卸し履歴</a>
+    <a href="/arrival_logs" style="text-decoration: none; color: #333; font-weight: bold;">📥 包材入荷履歴</a>
+  </div>
+</nav>
+
+
+  <h1>蔵出し（完成品の支給・戻し）</h1>
+  <table>
+    <thead>
+      <tr>
+        <th>製品名</th>
+        <th>在庫</th>
+        <th>数量</th>
+        <th>操作</th>
+      </tr>
+    </thead>
+    <tbody id="dispatch-list">
+    </tbody>
+  </table>
+
+  <script>
+  const tbody = document.getElementById("dispatch-list");
+
+  // ① 在庫一覧を取得
+  fetch("/api/dispatch")
+    .then(res => res.json())
+    .then(data => {
+      data.forEach(item => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${item.name}</td>
+          <td class="stock">${item.stock}</td>
+          <td><input type="number" min="1" value="" /></td>
+          <td>
+            <button onclick="processDispatch(this, ${item.inventory_id}, -1)">蔵出し</button>
+            <button onclick="processDispatch(this, ${item.inventory_id}, 1)">戻し</button>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    });
+
+  // ② 蔵出し or 戻し処理
+  function processDispatch(button, inventoryId, direction) {
+    const row = button.closest("tr");
+    const product = row.cells[0].textContent;
+    const stockCell = row.querySelector(".stock");
+    const input = row.querySelector("input");
+    const value = parseInt(input.value);
+    if (isNaN(value) || value <= 0) {
+      alert("有効な数量を入力してください");
+      return;
+    }
+
+    const action = direction > 0 ? "戻し" : "蔵出し";
+    const endpoint = `/api/inventory/${inventoryId}/${direction > 0 ? "restore" : "use"}`;
+    const comment = prompt(`${product} を${action}します。コメントを入力してください：`);
+    if (comment === null) return;
+
+    fetch(endpoint, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        quantity: value,
+        comment: comment
+      })
+    })
+    .then(res => {
+      if (!res.ok) throw new Error("在庫更新に失敗しました");
+      // 表示更新
+      const current = parseInt(stockCell.textContent);
+      stockCell.textContent = current + direction * value;
+      input.value = "";
+    })
+    .catch(err => alert(err.message));
+  }
+</script>
+
+</body>
+</html>

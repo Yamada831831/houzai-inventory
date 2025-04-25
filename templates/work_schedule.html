@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>作業予定一覧</title>
+  <style>
+    body {
+      font-family: "Noto Sans JP", "Meiryo", sans-serif;
+      background-color: #f4f6f8;
+      margin: 20px;
+      color: #333;
+    }
+    h1 {
+      font-size: 24px;
+      margin-bottom: 20px;
+    }
+    .form-group {
+      margin-bottom: 10px;
+      display: block;
+    }
+    form {
+      background-color: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: bold;
+    }
+    select, input {
+      width: 100%;
+      padding: 8px;
+      margin-top: 4px;
+      margin-bottom: 12px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    button {
+      padding: 8px 16px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    .delete-btn {
+      background-color: #dc3545;
+      margin-left: 8px;
+    }
+    .delete-btn:hover {
+      background-color: #a71d2a;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background-color: #fff;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    }
+    th {
+      background-color: #f0f3f5;
+      text-align: left;
+      padding: 12px;
+      font-size: 14px;
+    }
+    td {
+      padding: 12px;
+      border-top: 1px solid #e0e6eb;
+      font-size: 14px;
+    }
+    .pending { background-color: #f9f9f9; }
+    .requested { background-color: #fff8dc; }
+    .completed { background-color: #e0ffe0; }
+    tr:hover { background-color: #f9fbfc; }
+  </style>
+</head>
+<body>
+<nav style="background-color: #f5f5f5; padding: 10px 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); font-family: 'Noto Sans JP', 'Meiryo', sans-serif; display: flex; flex-direction: column; gap: 10px;">
+  <!-- 1列目 -->
+  <div>
+    <a href="/inventory" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">📦 在庫一覧</a>
+    <a href="/work_schedule" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">📝 作業予定</a>
+    <a href="/shipment" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">🚚 出荷予定</a>
+    <a href="/dispatch" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">📤 蔵出し</a>
+    <a href="/arrival" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">📥 包材入荷</a>
+    <a href="/stock_adjust" style="text-decoration: none; color: #333; font-weight: bold;">🧮 棚卸し</a>
+  </div>
+
+  <!-- 2列目 -->
+  <div>
+    <a href="/master_material" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">🏷 包材マスタ</a>
+    <a href="/master_semi" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">🧩 半完成品マスタ</a>
+    <a href="/master_finished" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">🎯 完成品マスタ</a>
+    <a href="/master_worker" style="text-decoration: none; color: #333; font-weight: bold;">👤 作業者マスタ</a>
+  </div>
+
+  <!-- 3列目 -->
+  <div>
+    <a href="/work_log" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">📂 作業ログ</a>
+    <a href="/stock_adjust_logs" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">🧮 棚卸し履歴</a>
+    <a href="/arrival_logs" style="text-decoration: none; color: #333; font-weight: bold;">📥 包材入荷履歴</a>
+  </div>
+</nav>
+
+  <h1>作業予定一覧</h1>
+
+  <form id="work-form">
+    <div class="form-group">
+      <label>タイプ：
+        <select id="type">
+          <option value="finished">完成品</option>
+          <option value="semi">半完成品</option>
+        </select>
+      </label>
+    </div>
+    <div class="form-group">
+      <label>製品名：
+        <select id="product" required></select>
+      </label>
+    </div>
+    <div class="form-group">
+      <label>作業者（任意）：
+        <select id="worker">
+          <option value="">（未選択）</option>
+        </select>
+      </label>
+    </div>
+    <div class="form-group">
+      <label>枚数：
+        <input type="number" id="quantity" required>
+      </label>
+    </div>
+    <div class="form-group">
+      <label>裏シールJAN下6桁：
+        <input type="text" id="jan_code" pattern="\d{6}" placeholder="例：123456">
+      </label>
+    </div>
+    <div class="form-group">
+      <label>コメント：
+        <input type="text" id="comment">
+      </label>
+    </div>
+    <div class="form-group">
+      <button type="submit">予定を追加</button>
+    </div>
+  </form>
+
+  <table>
+    <thead>
+      <tr>
+        <th>タイプ</th><th>製品名</th><th>作業者</th><th>枚数</th><th>JAN下6桁</th><th>ステータス</th><th>コメント</th><th>操作</th>
+      </tr>
+    </thead>
+    <tbody id="schedule-list"></tbody>
+  </table>
+
+  <script>
+    const typeSelect = document.getElementById("type");
+    const productSelect = document.getElementById("product");
+    const list = document.getElementById("schedule-list");
+
+    async function fetchProducts() {
+      const [semi, finished] = await Promise.all([
+        fetch("/api/semi_products").then(res => res.json()),
+        fetch("/api/finished_products").then(res => res.json())
+      ]);
+      return { semi, finished };
+    }
+
+    let products = {};
+    async function populateProducts() {
+      products = await fetchProducts();
+      updateProductOptions();
+    }
+　　
+　　let workers = [];
+async function loadWorkers() {
+  const res = await fetch("/api/workers");
+  workers = await res.json();
+
+  // 登録フォームの <select id="worker"> にセット
+  const workerSelect = document.getElementById("worker");
+  if (workerSelect) {
+    workerSelect.innerHTML = '<option value="">（未選択）</option>' +
+      workers.map(w => `<option value="${w.id}">${w.name}</option>`).join("");
+  }
+}
+
+
+function updateSchedule(id) {
+  const qty = document.getElementById(`qty-${id}`).value;
+  const jan = document.getElementById(`jan-${id}`).value;
+  const worker = document.getElementById(`worker-${id}`).value || null;
+
+  fetch(`/api/schedules/${id}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      quantity: parseInt(qty),
+      jan_code: jan,
+      worker_id: worker ? parseInt(worker) : null
+    }),
+  })
+    .then((res) => res.json())
+    .then((data) => {
+      alert(data.message || "更新しました！");
+      loadSchedules();
+    })
+    .catch((err) => console.error("更新エラー:", err));
+}
+
+
+    function updateProductOptions() {
+      const type = typeSelect.value;
+      const options = products[type];
+      productSelect.innerHTML = "";
+      options.forEach(p => {
+        const option = document.createElement("option");
+        option.value = p.id;
+        option.textContent = type === "semi" ? `${p.label}＋${p.bag}` : `${p.destination} ${p.product_name} ${p.size}（${p.origin}）`;
+        productSelect.appendChild(option);
+      });
+    }
+
+    typeSelect.addEventListener("change", updateProductOptions);
+
+    async function loadSchedules() {
+      const res = await fetch("/api/schedules");
+      const data = await res.json();
+      list.innerHTML = "";
+      data.forEach(addRow);
+    }
+
+    function addRow(item) {
+      const row = document.createElement("tr");
+      const className = item.status === "依頼済" ? "requested" : (item.status === "完了" ? "completed" : "pending");
+      row.className = className;
+
+      row.innerHTML = `
+        <td>${item.product_type === 'semi' ? '半完成品' : '完成品'}</td>
+        <td>${item.product_name || 'ID:' + item.product_id}</td>
+        <td>
+  <select id="worker-${item.id}" class="input-worker">
+    <option value="">（未選択）</option>
+    ${workers.map(w => `
+      <option value="${w.id}" ${w.id === item.worker_id ? "selected" : ""}>
+        ${w.name}
+      </option>`).join("")}
+  </select>
+</td>
+        <td><input type="number" value="${item.quantity}" id="qty-${item.id}" class="input-qty" style="width: 60px;"></td>
+        <td><input type="text" value="${item.jan_code || ''}" id="jan-${item.id}" class="input-jan" style="width: 80px;"></td>
+        <td>${item.status}</td>
+        <td>${item.comment || ""}</td>
+        <td>
+          <button onclick="updateSchedule(${item.id})" class="btn btn-update">更新</button>
+          <button onclick="printSchedule(${item.id})" class="btn btn-print">印刷</button>
+          <button onclick="completeSchedule(${item.id})" class="btn btn-complete">完了</button>
+          <button onclick="deleteSchedule(${item.id})" class="btn btn-delete">削除</button>
+        </td>
+      `;
+      list.appendChild(row);
+    }
+
+    async function completeSchedule(id) {
+      if (!confirm("完了して在庫を更新しますか？")) return;
+      await fetch(`/api/schedules/${id}/complete`, { method: "PATCH" });
+      loadSchedules();
+    }
+
+    async function updateStatus(id, status) {
+  const res = await fetch(`/api/schedules/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ status })
+  });
+  const data = await res.json();
+  return data;  // ← ここで返すだけにする
+}
+
+
+async function printSchedule(id) {
+  await updateStatus(id, "依頼済");
+  loadSchedules();
+
+  // 印刷ページを新しいタブで開く
+  window.open(`/print_request?id=${id}`, "_blank");
+}
+
+
+    async function deleteSchedule(id) {
+      if (!confirm("この作業予定を削除しますか？")) return;
+      await fetch(`/api/schedules/${id}`, { method: "DELETE" });
+      loadSchedules();
+    }
+
+    document.getElementById("work-form").addEventListener("submit", async e => {
+  e.preventDefault();
+  const data = {
+    product_type: typeSelect.value,
+    product_id: parseInt(document.getElementById("product").value),
+    worker_id: null,
+    quantity: parseInt(document.getElementById("quantity").value),
+    jan_code: document.getElementById("jan_code").value,
+    comment: document.getElementById("comment").value,
+    status: "予定"  // ←これを追加！
+  };
+  await fetch("/api/schedules", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data)
+  });
+  e.target.reset();
+  updateProductOptions();
+  loadSchedules();
+});
+
+
+    window.onload = async () => {
+      await populateProducts();
+      await loadWorkers();
+      await loadSchedules();
+    };
+  </script>
+</body>
+</html>

@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>出荷予定インポート</title>
+  <style>
+    body {
+      font-family: "Noto Sans JP", "Meiryo", sans-serif;
+      background: #f4f6f8;
+      margin: 20px;
+    }
+    h1 {
+      font-size: 22px;
+    }
+    input, select {
+      padding: 6px;
+      margin: 4px;
+    }
+    button {
+      padding: 6px 12px;
+      margin-top: 10px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+    }
+    button:disabled {
+      background-color: #ccc;
+    }
+    table {
+      width: 100%;
+      margin-top: 20px;
+      border-collapse: collapse;
+      background: #fff;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    th, td {
+      padding: 8px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+    }
+    .error-row {
+      background-color: #ffe0e0;
+    }
+  </style>
+</head>
+<body>
+<!-- ナビゲーションバー -->
+<nav style="background-color: #f5f5f5; padding: 10px 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); font-family: 'Noto Sans JP', 'Meiryo', sans-serif; display: flex; flex-direction: column; gap: 10px;">
+  <!-- 1列目 -->
+  <div>
+    <a href="/inventory" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">📦 在庫一覧</a>
+    <a href="/work_schedule" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">📝 作業予定</a>
+    <a href="/shipment" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">🚚 出荷予定</a>
+    <a href="/dispatch" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">📤 蔵出し</a>
+    <a href="/arrival" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">📥 包材入荷</a>
+    <a href="/stock_adjust" style="text-decoration: none; color: #333; font-weight: bold;">🧮 棚卸し</a>
+  </div>
+
+  <!-- 2列目 -->
+  <div>
+    <a href="/master_material" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">🏷 包材マスタ</a>
+    <a href="/master_semi" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">🧩 半完成品マスタ</a>
+    <a href="/master_finished" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">🎯 完成品マスタ</a>
+    <a href="/master_worker" style="text-decoration: none; color: #333; font-weight: bold;">👤 作業者マスタ</a>
+  </div>
+
+  <!-- 3列目 -->
+  <div>
+    <a href="/work_log" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">📂 作業ログ</a>
+    <a href="/stock_adjust_logs" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">🧮 棚卸し履歴</a>
+    <a href="/arrival_logs" style="text-decoration: none; color: #333; font-weight: bold;">📥 包材入荷履歴</a>
+  </div>
+</nav>
+
+  <h1>出荷予定インポート</h1>
+
+  <!-- CSV読み込み -->
+  <input type="file" id="csvFile" accept=".csv" />
+  <button onclick="importCSV()">CSVインポート</button>
+
+  <h2>手動追加</h2>
+  <div>
+    <input type="text" id="manualName" placeholder="商品名" required />
+    <input type="text" id="manualDest" placeholder="出荷先" required />
+    <input type="text" id="manualSize" placeholder="規格" required />
+    <input type="text" id="manualOrigin" placeholder="産地" required />
+    <input type="number" id="manualPack" placeholder="入数" style="width: 60px;" />
+    <input type="text" id="manualJan" placeholder="JAN下6桁" style="width: 100px;" />
+    <input type="number" id="mon" placeholder="月" style="width: 50px;" />
+    <input type="number" id="tue" placeholder="火" style="width: 50px;" />
+    <input type="number" id="wed" placeholder="水" style="width: 50px;" />
+    <input type="number" id="thu" placeholder="木" style="width: 50px;" />
+    <input type="number" id="fri" placeholder="金" style="width: 50px;" />
+    <input type="number" id="sat" placeholder="土" style="width: 50px;" />
+    <input type="number" id="sun" placeholder="日" style="width: 50px;" />
+    <button onclick="addManual()">追加</button>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>商品名</th><th>出荷先</th><th>規格</th><th>産地</th><th>入数</th><th>JAN</th>
+        <th>月</th><th>火</th><th>水</th><th>木</th><th>金</th><th>土</th><th>日</th>
+        <th>完成品名（マスタ）</th>
+      </tr>
+    </thead>
+    <tbody id="shipment-body"></tbody>
+  </table>
+
+  <button id="registerBtn" onclick="registerShipment()" disabled>登録</button>
+
+  <script>
+    let shipmentData = [];
+
+    function importCSV() {
+      const file = document.getElementById("csvFile").files[0];
+      if (!file) return alert("CSVファイルを選んでください。");
+
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        const lines = e.target.result.split("\n").filter(l => l.trim() !== "");
+        const headers = lines[0].split(",");
+        shipmentData = lines.slice(1).map(line => {
+          const cols = line.split(",");
+          const obj = {};
+          headers.forEach((h, i) => {
+            obj[h.trim()] = isNaN(cols[i]) ? cols[i]?.trim() : parseInt(cols[i]);
+          });
+          return obj;
+        });
+        validateAndRender();
+      };
+      reader.readAsText(file, "utf-8");
+    }
+
+    function addManual() {
+  const name = document.getElementById("manualName").value.trim();
+  const dest = document.getElementById("manualDest").value.trim();
+  const size = document.getElementById("manualSize").value.trim();
+  const origin = document.getElementById("manualOrigin").value.trim();
+  const pack = parseInt(document.getElementById("manualPack").value) || 0;
+
+  if (!name || !dest || !size || !origin || pack <= 0) {
+    alert("商品名・出荷先・規格・産地・入数は必須です");
+    return;
+  }
+
+  const item = {
+    "商品名": name,
+    "出荷先": dest,
+    "規格": size,
+    "産地": origin,
+    "入数": pack,
+    "JAN": document.getElementById("manualJan").value.trim(), // ← 空欄OK
+    "月": parseInt(document.getElementById("mon").value) || 0,
+    "火": parseInt(document.getElementById("tue").value) || 0,
+    "水": parseInt(document.getElementById("wed").value) || 0,
+    "木": parseInt(document.getElementById("thu").value) || 0,
+    "金": parseInt(document.getElementById("fri").value) || 0,
+    "土": parseInt(document.getElementById("sat").value) || 0,
+    "日": parseInt(document.getElementById("sun").value) || 0
+  };
+
+  shipmentData.push(item);
+  validateAndRender();
+}
+
+
+    function validateAndRender() {
+  const tbody = document.getElementById("shipment-body");
+  tbody.innerHTML = "";
+  let pending = shipmentData.length;
+
+  shipmentData.forEach((item) => {
+    const tr = document.createElement("tr");
+
+    const requestBody = {
+      product_name: item["商品名"],
+      destination: item["出荷先"],
+      size: item["規格"],
+      origin: item["産地"]
+    };
+
+    fetch("/api/finished_products/lookup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(requestBody)
+    })
+    .then(res => res.json())
+    .then(data => {
+      const matchName = data.name || "（未登録）";
+      const finishedId = data.id || null;
+
+      if (!finishedId) tr.classList.add("error-row");
+
+      // 表示カラム一覧
+      const keys = ["商品名", "出荷先", "規格", "産地", "入数", "JAN", "月", "火", "水", "木", "金", "土", "日"];
+      keys.forEach(k => {
+        const td = document.createElement("td");
+        td.textContent = item[k] || "";
+        tr.appendChild(td);
+      });
+
+      // 照合された完成品名（または未登録）を最後に追加
+      const tdName = document.createElement("td");
+      tdName.textContent = matchName;
+      tr.appendChild(tdName);
+
+      // 完成品IDと表示名を item に追加
+      item.finished_id = finishedId;
+      item.match_name = matchName;
+
+      tbody.appendChild(tr);
+
+      pending--;
+      if (pending === 0) {
+        const anyError = document.querySelector(".error-row");
+        document.getElementById("registerBtn").disabled = !!anyError;
+      }
+    })
+    .catch(err => {
+      console.error("照合エラー:", err);
+      tr.classList.add("error-row");
+      tbody.appendChild(tr);
+      pending--;
+      document.getElementById("registerBtn").disabled = true;
+    });
+  });
+}
+
+
+    function registerShipment() {
+      fetch("/api/shipments/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ shipments: shipmentData })
+      })
+      .then(res => res.json())
+      .then(data => {
+        alert(data.message || "作業予定に登録しました！");
+      });
+    }
+  </script>
+</body>
+</html>

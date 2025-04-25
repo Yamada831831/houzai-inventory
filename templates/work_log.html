@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>作業ログ一覧</title>
+  <style>
+    body {
+      font-family: "Noto Sans JP", "Meiryo", sans-serif;
+      margin: 20px;
+      background-color: #f4f6f8;
+      color: #333;
+    }
+    h1 {
+      font-size: 24px;
+      margin-bottom: 20px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background-color: #fff;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+    }
+    th {
+      background-color: #f0f3f5;
+      text-align: left;
+      padding: 12px;
+      font-weight: bold;
+      font-size: 14px;
+      color: #444;
+    }
+    td {
+      padding: 12px;
+      border-top: 1px solid #e0e6eb;
+      font-size: 14px;
+    }
+    tr:hover {
+      background-color: #f9fbfc;
+    }
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ナビゲーションバー -->
+<nav style="background-color: #f5f5f5; padding: 10px 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); font-family: 'Noto Sans JP', 'Meiryo', sans-serif; display: flex; flex-direction: column; gap: 10px;">
+  <!-- 1列目 -->
+  <div>
+    <a href="/inventory" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">📦 在庫一覧</a>
+    <a href="/work_schedule" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">📝 作業予定</a>
+    <a href="/shipment" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">🚚 出荷予定</a>
+    <a href="/dispatch" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">📤 蔵出し</a>
+    <a href="/arrival" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">📥 包材入荷</a>
+    <a href="/stock_adjust" style="text-decoration: none; color: #333; font-weight: bold;">🧮 棚卸し</a>
+  </div>
+
+  <!-- 2列目 -->
+  <div>
+    <a href="/master_material" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">🏷 包材マスタ</a>
+    <a href="/master_semi" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">🧩 半完成品マスタ</a>
+    <a href="/master_finished" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">🎯 完成品マスタ</a>
+    <a href="/master_worker" style="text-decoration: none; color: #333; font-weight: bold;">👤 作業者マスタ</a>
+  </div>
+
+  <!-- 3列目 -->
+  <div>
+    <a href="/work_log" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">📂 作業ログ</a>
+    <a href="/stock_adjust_logs" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">🧮 棚卸し履歴</a>
+    <a href="/arrival_logs" style="text-decoration: none; color: #333; font-weight: bold;">📥 包材入荷履歴</a>
+  </div>
+</nav>
+
+<div class="container">
+  <h1>作業ログ一覧（完了済みのみ）</h1>
+  <table>
+    <thead>
+      <tr>
+        <th>タイプ</th>
+        <th>製品名</th>
+        <th>作業者</th>
+        <th>枚数</th>
+        <th>完了日</th>
+        <th>コメント</th>
+      </tr>
+    </thead>
+    <tbody id="log-list"></tbody>
+  </table>
+</div>
+
+<script>
+  async function loadWorkLogs() {
+    const res = await fetch("/api/work_logs");
+    const data = await res.json();
+    const list = document.getElementById("log-list");
+    list.innerHTML = "";
+
+    data.forEach(log => {
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td>${log.product_type === 'semi' ? '半完成品' : '完成品'}</td>
+        <td>${log.product_name || 'ID:' + log.product_id}</td>
+        <td>${log.worker_name || '―'}</td>
+        <td>${log.quantity}</td>
+        <td>${log.completed_at}</td>
+        <td>${log.comment || ''}</td>
+      `;
+      list.appendChild(row);
+    });
+  }
+
+  window.onload = loadWorkLogs;
+</script>
+
+</body>
+</html>

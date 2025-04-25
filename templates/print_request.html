@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>貼付依頼書</title>
+  <style>
+    body {
+      font-family: 'Noto Sans JP', sans-serif;
+      padding: 40px;
+      font-size: 17px;
+    }
+    h1 {
+      text-align: center;
+      font-size: 26px;
+      margin-bottom: 30px;
+    }
+    p {
+      text-align: right;
+      margin-bottom: 20px;
+      font-size: 16px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    th, td {
+      border: 1px solid #000;
+      padding: 14px;
+      text-align: left;
+      vertical-align: top;
+    }
+    .label {
+      width: 25%;
+      font-weight: bold;
+      background: #f0f0f0;
+    }
+    .split-row td {
+      width: 50%;
+      height: 60px;
+    }
+    .package-line {
+      white-space: pre-line;
+    }
+  </style>
+</head>
+<body>
+  <h1>貼付依頼書</h1>
+  <p>印刷日: {{ print_date }}</p>
+
+  <table>
+    <tr>
+      <th>依頼No.</th>
+      <td>{{ schedule_id }}</td>
+    </tr>
+    <tr>
+      <td class="label">作業種別</td>
+      <td>{{ task_type }}</td>
+    </tr>
+    <tr>
+      <td class="label">製品名</td>
+      <td>{{ product_name }}</td>
+    </tr>
+    <tr>
+      <td class="label">使用包材</td>
+      <td class="package-line">
+        {% if packaging %}
+          {{ packaging.split('（JAN下6桁:')[0] }}  
+          {% if back_label_name %}＋{{ back_label_name }}{% endif %}
+          {% if 'JAN下6桁:' in packaging %}
+          <br>JAN下6桁: {{ packaging.split('JAN下6桁:')[1].replace('）', '') }}
+          {% endif %}
+        {% else %}
+          未登録
+        {% endif %}
+      </td>
+    </tr>
+    <tr>
+      <td class="label">作業枚数</td>
+      <td>{{ quantity }}</td>
+    </tr>
+    <tr class="split-row">
+      <td>完了日：</td>
+      <td>作業者名：</td>
+    </tr>
+    <tr class="split-row">
+      <td>裏シール印刷日：</td>
+      <td>作業者名：</td>
+    </tr>
+  </table>
+</body>
+</html>

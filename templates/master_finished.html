@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+<head>
+<meta charset="utf-8"/>
+<title>完成品マスタ管理</title>
+<style>
+    body {
+      font-family: "Noto Sans JP", "Meiryo", sans-serif;
+      background-color: #f4f6f8;
+      margin: 20px;
+    }
+    h1 {
+      font-size: 22px;
+      margin-bottom: 20px;
+    }
+    input, select {
+      padding: 6px;
+      margin: 4px;
+    }
+    button {
+      padding: 6px 12px;
+      margin-left: 4px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    .delete-btn {
+      background-color: #dc3545;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      background-color: #fff;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+    }
+    th, td {
+      padding: 10px;
+      border: 1px solid #ddd;
+      font-size: 14px;
+      text-align: left;
+    }
+    .inactive {
+      background-color: #f0f0f0;
+      color: #aaa;
+    }
+  </style>
+</head>
+<body>
+<!-- ナビゲーションバー -->
+<nav style="background-color: #f5f5f5; padding: 10px 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); font-family: 'Noto Sans JP', 'Meiryo', sans-serif; display: flex; flex-direction: column; gap: 10px;">
+  <!-- 1列目 -->
+  <div>
+    <a href="/inventory" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">📦 在庫一覧</a>
+    <a href="/work_schedule" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">📝 作業予定</a>
+    <a href="/shipment" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">🚚 出荷予定</a>
+    <a href="/dispatch" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">📤 蔵出し</a>
+    <a href="/arrival" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">📥 包材入荷</a>
+    <a href="/stock_adjust" style="text-decoration: none; color: #333; font-weight: bold;">🧮 棚卸し</a>
+  </div>
+
+  <!-- 2列目 -->
+  <div>
+    <a href="/master_material" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">🏷 包材マスタ</a>
+    <a href="/master_semi" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">🧩 半完成品マスタ</a>
+    <a href="/master_finished" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">🎯 完成品マスタ</a>
+    <a href="/master_worker" style="text-decoration: none; color: #333; font-weight: bold;">👤 作業者マスタ</a>
+  </div>
+
+  <!-- 3列目 -->
+  <div>
+    <a href="/work_log" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">📂 作業ログ</a>
+    <a href="/stock_adjust_logs" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">🧮 棚卸し履歴</a>
+    <a href="/arrival_logs" style="text-decoration: none; color: #333; font-weight: bold;">📥 包材入荷履歴</a>
+  </div>
+</nav>
+
+<h1>完成品マスタ管理</h1>
+<!-- 新規追加フォーム -->
+<form onsubmit="addProduct(); return false;">
+<input id="dest" placeholder="出荷先" required="" type="text"/>
+<input id="name" placeholder="商品名" required="" type="text"/>
+<input id="size" placeholder="規格" required="" type="text"/>
+<input id="origin" placeholder="産地" required="" type="text"/>
+<select id="seal" required>
+  <option value="">裏シールを選択</option>
+</select>
+
+<select id="semiId" required>
+  <option value="">半完成品を選択</option>
+</select>
+<button type="submit">追加</button>
+</form>
+<!-- 完成品マスタ一覧 -->
+<table>
+<thead>
+<tr><th>出荷先</th><th>商品名</th><th>規格</th><th>産地</th><th>裏シール名</th><th>半完成品</th><th>登録日</th><th>操作</th></tr>
+</thead>
+<tbody id="master-list"></tbody>
+</table>
+<script>
+  // 完成品登録
+  function addProduct() {
+    const destination = document.getElementById("dest").value;
+    const name = document.getElementById("name").value;
+    const size = document.getElementById("size").value;
+    const origin = document.getElementById("origin").value;
+    const sealId = parseInt(document.getElementById("seal").value);
+    const semiId = parseInt(document.getElementById("semiId").value);
+
+    fetch("/api/finished_products", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        destination: destination,
+        product_name: name,
+        size: size,
+        origin: origin,
+        seal_material_id: sealId,
+        semi_product_id: semiId
+      })
+    })
+    .then(res => res.json())
+    .then(data => {
+      console.log("登録完了:", data);
+      location.reload();
+    });
+
+    return false;
+  }
+
+  // 初期データロード
+  function loadMaterialsAndSemi() {
+    fetch("/api/materials")
+      .then(res => res.json())
+      .then(data => {
+        const sealSelect = document.getElementById("seal");
+        data.filter(m => m.type === "裏シール").forEach(m => {
+          const opt = document.createElement("option");
+          opt.value = m.id;
+          opt.textContent = m.name;
+          sealSelect.appendChild(opt);
+        });
+      });
+
+    fetch("/api/semi_products")
+      .then(res => res.json())
+      .then(data => {
+        const semiSelect = document.getElementById("semiId");
+        data.forEach(s => {
+          const opt = document.createElement("option");
+          opt.value = s.id;
+          opt.textContent = `${s.label} + ${s.bag}`;
+          semiSelect.appendChild(opt);
+        });
+      });
+  }
+
+  // 完成品一覧表示
+  function loadFinishedProducts() {
+    fetch("/api/finished_products")
+      .then(res => res.json())
+      .then(data => {
+        const list = document.getElementById("master-list");
+        list.innerHTML = "";
+        data.forEach(p => {
+          const row = document.createElement("tr");
+          if (!p.is_active) row.classList.add("inactive");
+          row.innerHTML = `
+  <td>${p.destination}</td>
+  <td>${p.product_name}</td>
+  <td>${p.size}</td>
+  <td>${p.origin}</td>
+  <td>${p.seal_name}</td>
+  <td>${p.label_name} + ${p.bag_name}</td>
+  <td>${p.created_at}</td>  <!-- ここ！ -->
+  <td>
+    <button onclick="toggleProduct(${p.id})">${p.is_active ? '無効化' : '有効化'}</button>
+    <button onclick="deleteProduct(${p.id})" class="delete-btn">削除</button>
+  </td>
+`;
+          list.appendChild(row);
+        });
+      });
+  }
+
+  function toggleProduct(id) {
+    fetch(`/api/finished_products/${id}/toggle`, { method: "PATCH" })
+      .then(res => res.json())
+      .then(() => loadFinishedProducts());
+  }
+
+  function deleteProduct(id) {
+    const confirmDelete = confirm("この完成品マスタを完全に削除しますか？");
+    if (!confirmDelete) return;
+
+    fetch(`/api/finished_products/${id}`, { method: "DELETE" })
+      .then(res => res.json())
+      .then(() => loadFinishedProducts());
+  }
+
+  window.onload = () => {
+    loadMaterialsAndSemi();
+    loadFinishedProducts();
+  };
+</script>
+</body>
+</html>

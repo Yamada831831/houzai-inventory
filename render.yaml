@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: inventory-app
+    env: python
+    buildCommand: ""
+    startCommand: "python app.py"
+    envVars:
+      - key: DATABASE_URL
+        value: postgresql://neondb_owner:npg_qtw8LzT2cgXv@ep-small-paper-a17r2zbg-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require
+

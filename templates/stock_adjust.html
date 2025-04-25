@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>棚卸し</title>
+  <style>
+    body {
+      font-family: "Noto Sans JP", "Meiryo", sans-serif;
+      background-color: #f9f9f9;
+      margin: 20px;
+    }
+    h1 { font-size: 22px; margin-bottom: 20px; }
+    .tab { margin-right: 10px; cursor: pointer; padding: 6px 12px; background-color: #eee; border-radius: 6px; }
+    .tab.active { background-color: #007bff; color: white; }
+    .hidden { display: none; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background-color: white;
+      margin-top: 10px;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      font-size: 14px;
+      text-align: center;
+    }
+    input[type="number"], input[type="text"] {
+      width: 80px;
+      padding: 4px;
+    }
+    .adjust-btn {
+      background-color: #28a745;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+<!-- ナビゲーションバー -->
+<nav style="background-color: #f5f5f5; padding: 10px 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); font-family: 'Noto Sans JP', 'Meiryo', sans-serif; display: flex; flex-direction: column; gap: 10px;">
+  <!-- 1列目 -->
+  <div>
+    <a href="/inventory" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">📦 在庫一覧</a>
+    <a href="/work_schedule" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">📝 作業予定</a>
+    <a href="/shipment" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">🚚 出荷予定</a>
+    <a href="/dispatch" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">📤 蔵出し</a>
+    <a href="/arrival" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">📥 包材入荷</a>
+    <a href="/stock_adjust" style="text-decoration: none; color: #333; font-weight: bold;">🧮 棚卸し</a>
+  </div>
+
+  <!-- 2列目 -->
+  <div>
+    <a href="/master_material" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">🏷 包材マスタ</a>
+    <a href="/master_semi" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">🧩 半完成品マスタ</a>
+    <a href="/master_finished" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">🎯 完成品マスタ</a>
+    <a href="/master_worker" style="text-decoration: none; color: #333; font-weight: bold;">👤 作業者マスタ</a>
+  </div>
+
+  <!-- 3列目 -->
+  <div>
+    <a href="/work_log" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">📂 作業ログ</a>
+    <a href="/stock_adjust_logs" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">🧮 棚卸し履歴</a>
+    <a href="/arrival_logs" style="text-decoration: none; color: #333; font-weight: bold;">📥 包材入荷履歴</a>
+  </div>
+</nav>
+
+<h1>棚卸し画面</h1>
+
+<!-- カテゴリ切替 -->
+<div style="margin-bottom: 15px;">
+  <span class="tab active" onclick="showTab('material', this)">包材</span>
+  <span class="tab" onclick="showTab('semi', this)">半完成品</span>
+  <span class="tab" onclick="showTab('finished', this)">完成品</span>
+</div>
+
+<!-- 包材カテゴリ切替 -->
+<div id="material-subtabs" style="margin-bottom: 10px;">
+  <span class="tab active" onclick="showMaterialTab('袋', this)">袋</span>
+  <span class="tab" onclick="showMaterialTab('表シール', this)">表シール</span>
+  <span class="tab" onclick="showMaterialTab('裏シール', this)">裏シール</span>
+</div>
+
+<!-- 包材 -->
+<div id="material" class="tab-content">
+  <div id="material-袋">
+    <h3>袋</h3>
+    <table><thead><tr><th>品名</th><th>現在庫</th><th>実数</th><th>差分</th><th>コメント</th><th>操作</th></tr></thead><tbody id="袋-body"></tbody></table>
+  </div>
+  <div id="material-表シール" class="material-content hidden">
+    <h3>表シール</h3>
+    <table><thead><tr><th>品名</th><th>現在庫</th><th>実数</th><th>差分</th><th>コメント</th><th>操作</th></tr></thead><tbody id="表シール-body"></tbody></table>
+  </div>
+  <div id="material-裏シール" class="material-content hidden">
+    <h3>裏シール</h3>
+    <table><thead><tr><th>品名</th><th>現在庫</th><th>実数</th><th>差分</th><th>コメント</th><th>操作</th></tr></thead><tbody id="裏シール-body"></tbody></table>
+  </div>
+</div>
+
+<!-- 半完成品 -->
+<div id="semi" class="tab-content hidden">
+  <h3>半完成品</h3>
+  <table><thead><tr><th>品名</th><th>現在庫</th><th>実数</th><th>差分</th><th>コメント</th><th>操作</th></tr></thead><tbody id="semi-body"></tbody></table>
+</div>
+
+<!-- 完成品 -->
+<div id="finished" class="tab-content hidden">
+  <h3>完成品</h3>
+  <table><thead><tr><th>品名</th><th>現在庫</th><th>実数</th><th>差分</th><th>コメント</th><th>操作</th></tr></thead><tbody id="finished-body"></tbody></table>
+</div>
+
+<script>
+function showTab(type, el) {
+  document.querySelectorAll('.tab-content').forEach(e => e.classList.add('hidden'));
+  document.getElementById(type).classList.remove('hidden');
+  document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+  el.classList.add('active');
+
+  // 包材カテゴリタブの表示/非表示制御
+  const subtab = document.getElementById("material-subtabs");
+  if (type === "material") {
+    subtab.style.display = "block";
+  } else {
+    subtab.style.display = "none";
+  }
+}
+
+
+function showMaterialTab(subtype, el) {
+  document.querySelectorAll('[id^="material-"]').forEach(e => e.classList.add('hidden'));
+  document.getElementById(`material-${subtype}`).classList.remove('hidden');
+  document.querySelectorAll('#material-subtabs .tab').forEach(tab => tab.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function loadInventory() {
+  fetch("/api/inventory")
+    .then(res => res.json())
+    .then(data => {
+      ["袋", "表シール", "裏シール"].forEach(k => document.getElementById(`${k}-body`).innerHTML = "");
+      document.getElementById("semi-body").innerHTML = "";
+      document.getElementById("finished-body").innerHTML = "";
+
+      data.forEach(item => {
+        if (item.category === "material") {
+          const row = renderRow(item, item.name, item.stock, item.category);
+          document.getElementById(`${item.type}-body`).appendChild(row);
+        } else {
+          const row = renderRow(item, item.name, item.stock, item.category);
+          document.getElementById(`${item.category}-body`).appendChild(row);
+        }
+      });
+    });
+}
+
+function renderRow(item, name, stock, category) {
+  const id = item.inventory_id; // 完成品でも inventory.id を使う！
+
+  const tr = document.createElement("tr");
+  tr.innerHTML = `
+    <td>${name}</td>
+    <td>${stock}</td>
+    <td><input type="number" id="actual-${id}" value="${stock}" style="width: 70px;"></td>
+    <td id="diff-${id}">0</td>
+    <td><input type="text" id="comment-${id}" style="width: 120px;"></td>
+    <td>
+      <button
+        id="adjust-btn-${id}"
+        data-inventory-id="${id}"
+        onclick="adjust(${id}, '${category}')">
+        反映
+      </button>
+    </td>
+  `;
+
+  setTimeout(() => {
+    document.getElementById(`actual-${id}`).addEventListener("input", () => {
+      const newVal = parseInt(document.getElementById(`actual-${id}`).value);
+      const diff = newVal - stock;
+      document.getElementById(`diff-${id}`).textContent = diff;
+    });
+  }, 10);
+
+  return tr;
+}
+
+
+function adjust(inventoryId, category) {
+  const actual = parseInt(document.getElementById(`actual-${inventoryId}`).value);
+  const comment = document.getElementById(`comment-${inventoryId}`).value;
+
+  if (!inventoryId || isNaN(actual)) {
+    alert("このアイテムは棚卸しできません（IDまたは数量エラー）");
+    return;
+  }
+
+  fetch("/api/stock_adjust", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      id: inventoryId,
+      actual_stock: actual,
+      comment: comment,
+      category: category
+    })
+  })
+    .then(res => res.json())
+    .then(data => {
+      if (data.error) {
+        alert("エラー: " + data.error);
+      } else {
+        alert("棚卸し完了！");
+        loadInventory();
+      }
+    })
+    .catch(err => {
+      console.error("通信エラー:", err);
+      alert("通信に失敗しました");
+    });
+}
+
+
+
+window.onload = loadInventory;
+</script>

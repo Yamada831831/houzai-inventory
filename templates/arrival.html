@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>包材入荷予定</title>
+  <style>
+    body {
+      font-family: "Arial", "Meiryo", sans-serif;
+      margin: 20px;
+      background-color: #f9f9f9;
+    }
+    h2 {
+      background-color: #4CAF50;
+      color: white;
+      padding: 10px 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      font-size: 20px;
+    }
+    .form-section {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      background: #fff;
+      padding: 15px;
+      border-radius: 10px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+    label {
+      font-weight: bold;
+    }
+    select, input[type="date"], input[type="number"] {
+      padding: 5px 8px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+    button {
+      padding: 6px 12px;
+      background-color: #2196F3;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0b7dda;
+    }
+    table {
+      width: 100%;
+      background: #fff;
+      border-collapse: collapse;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    th, td {
+      padding: 10px;
+      text-align: left;
+      border-bottom: 1px solid #eee;
+    }
+    th {
+      background-color: #eee;
+    }
+    td button {
+      background-color: #4CAF50;
+    }
+    td button:disabled {
+      background-color: gray;
+      cursor: default;
+    }
+  </style>
+
+   <script>
+    async function renderMaterialOptions() {
+      const category = document.getElementById("category").value;
+      const res = await fetch(`/api/materials/category/${category}`);
+      const materials = await res.json();
+
+      const select = document.getElementById("materialSelect");
+      select.innerHTML = "";
+      materials.forEach(m => {
+        const opt = document.createElement("option");
+        opt.value = m.id;
+        opt.textContent = m.name;
+        select.appendChild(opt);
+      });
+    }
+
+    function addArrival() {
+      const materialId = document.getElementById("materialSelect").value;
+      const materialName = document.getElementById("materialSelect").selectedOptions[0]?.textContent || "";
+      const quantity = parseInt(document.getElementById("quantity").value);
+      const arrivalDate = document.getElementById("arrivalDate").value;
+      const comment = document.getElementById("comment").value;
+
+      if (!materialId || !quantity || !arrivalDate) {
+        alert("すべての項目を入力してください");
+        return;
+      }
+
+      const tbody = document.getElementById("arrivalList");
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${materialName}</td>
+        <td>${quantity}</td>
+        <td>${arrivalDate}</td>
+        <td>${comment}</td>
+        <td><button onclick="completeArrival(${materialId}, ${quantity}, \"${comment}\", this)">入荷完了</button></td>
+      `;
+      tbody.appendChild(tr);
+    }
+
+    async function completeArrival(materialId, quantity, comment, btn) {
+      const res = await fetch("/api/inventory/adjust", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: materialId,
+          category: "material",
+          change: quantity,
+          comment: comment || "入荷完了"
+        })
+      });
+
+      if (res.ok) {
+        alert("在庫に反映しました！");
+        btn.disabled = true;
+        btn.textContent = "完了済";
+      } else {
+        alert("在庫反映に失敗しました");
+      }
+    }
+
+    window.onload = renderMaterialOptions;
+  </script>
+</head>
+<body>
+<!-- ナビゲーションバー -->
+<nav style="background-color: #f5f5f5; padding: 10px 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); font-family: 'Noto Sans JP', 'Meiryo', sans-serif; display: flex; flex-direction: column; gap: 10px;">
+  <!-- 1列目 -->
+  <div>
+    <a href="/inventory" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">📦 在庫一覧</a>
+    <a href="/work_schedule" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">📝 作業予定</a>
+    <a href="/shipment" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">🚚 出荷予定</a>
+    <a href="/dispatch" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">📤 蔵出し</a>
+    <a href="/arrival" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">📥 包材入荷</a>
+    <a href="/stock_adjust" style="text-decoration: none; color: #333; font-weight: bold;">🧮 棚卸し</a>
+  </div>
+
+  <!-- 2列目 -->
+  <div>
+    <a href="/master_material" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">🏷 包材マスタ</a>
+    <a href="/master_semi" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">🧩 半完成品マスタ</a>
+    <a href="/master_finished" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">🎯 完成品マスタ</a>
+    <a href="/master_worker" style="text-decoration: none; color: #333; font-weight: bold;">👤 作業者マスタ</a>
+  </div>
+
+  <!-- 3列目 -->
+  <div>
+    <a href="/work_log" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">📂 作業ログ</a>
+    <a href="/stock_adjust_logs" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">🧮 棚卸し履歴</a>
+    <a href="/arrival_logs" style="text-decoration: none; color: #333; font-weight: bold;">📥 包材入荷履歴</a>
+  </div>
+</nav>
+
+  <h2>📦 包材入荷予定</h2>
+
+  <div class="form-section">
+    <div style="flex-basis: 100%; display: flex; gap: 10px; align-items: center;">
+      <label>カテゴリ:</label>
+      <select id="category" onchange="renderMaterialOptions()">
+        <option value="袋">袋</option>
+        <option value="表シール">表シール</option>
+        <option value="裏シール">裏シール</option>
+      </select>
+
+      <label>包材名:</label>
+      <select id="materialSelect"></select>
+    </div>
+
+    <div style="flex-basis: 100%; display: flex; gap: 10px; align-items: center; margin-top: 10px;">
+      <label>入荷日:</label>
+      <input type="date" id="arrivalDate">
+
+      <label>数量:</label>
+      <input type="number" id="quantity" style="width: 80px;"> 枚
+
+      <label>コメント:</label>
+      <input type="text" id="comment" placeholder="例：追加発注分">
+
+      <button onclick="addArrival()">追加</button>
+    </div>
+  </div>
+
+  <h3>⏳ 入荷予定一覧</h3>
+  <table>
+    <thead>
+      <tr><th>包材名</th><th>数量</th><th>入荷日</th><th>コメント</th><th>操作</th></tr>
+    </thead>
+    <tbody id="arrivalList"></tbody>
+  </table>
+</body>
+</html>

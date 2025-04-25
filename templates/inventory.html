@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>在庫一覧</title>
+  <style>
+    body {
+      font-family: "Noto Sans JP", "Meiryo", sans-serif;
+      background-color: #f4f6f8;
+      margin: 20px;
+      color: #333;
+    }
+    h1 {
+      font-size: 24px;
+      margin-bottom: 20px;
+    }
+    .tab {
+      display: inline-block;
+      margin-right: 10px;
+      cursor: pointer;
+      font-weight: bold;
+      padding: 6px 12px;
+      background-color: #e0e6eb;
+      border-radius: 6px;
+    }
+    .tab:hover {
+      background-color: #d0d8de;
+    }
+    .active {
+      background-color: #007bff;
+      color: #fff;
+    }
+    .hidden {
+      display: none;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin-top: 10px;
+      background-color: #fff;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    }
+    th {
+      background-color: #f0f3f5;
+      text-align: left;
+      padding: 12px;
+      font-size: 14px;
+    }
+    td {
+      padding: 12px;
+      border-top: 1px solid #e0e6eb;
+      font-size: 14px;
+    }
+    .low-stock {
+      color: red;
+      font-weight: bold;
+    }
+    tr:hover {
+      background-color: #f9fbfc;
+    }
+    button {
+      padding: 6px 12px;
+      margin: 2px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+  </style>
+</head>
+<body>
+<!-- ナビゲーションバー -->
+<nav style="background-color: #f5f5f5; padding: 10px 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); font-family: 'Noto Sans JP', 'Meiryo', sans-serif; display: flex; flex-direction: column; gap: 10px;">
+  <!-- 1列目 -->
+  <div>
+    <a href="/inventory" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">📦 在庫一覧</a>
+    <a href="/work_schedule" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">📝 作業予定</a>
+    <a href="/shipment" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">🚚 出荷予定</a>
+    <a href="/dispatch" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">📤 蔵出し</a>
+    <a href="/arrival" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">📥 包材入荷</a>
+    <a href="/stock_adjust" style="text-decoration: none; color: #333; font-weight: bold;">🧮 棚卸し</a>
+  </div>
+
+  <!-- 2列目 -->
+  <div>
+    <a href="/master_material" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">🏷 包材マスタ</a>
+    <a href="/master_semi" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">🧩 半完成品マスタ</a>
+    <a href="/master_finished" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">🎯 完成品マスタ</a>
+    <a href="/master_worker" style="text-decoration: none; color: #333; font-weight: bold;">👤 作業者マスタ</a>
+  </div>
+
+  <!-- 3列目 -->
+  <div>
+    <a href="/work_log" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">📂 作業ログ</a>
+    <a href="/stock_adjust_logs" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">🧮 棚卸し履歴</a>
+    <a href="/arrival_logs" style="text-decoration: none; color: #333; font-weight: bold;">📥 包材入荷履歴</a>
+  </div>
+</nav>
+
+  <h1>在庫一覧</h1>
+
+<!-- 上段：大カテゴリタブ -->
+<div>
+  <span class="tab active" onclick="showTab('packaging')">包材</span>
+  <span class="tab" onclick="showTab('semi')">半完成品</span>
+  <span class="tab" onclick="showTab('finished')">完成品</span>
+</div>
+
+<!-- 包材カテゴリ（袋／表シール／裏シール） -->
+<div id="packaging" class="tab-content">
+  <div style="margin-top: 10px;">
+    <span class="tab active" onclick="showMaterialTab('袋')">袋</span>
+    <span class="tab" onclick="showMaterialTab('表シール')">表シール</span>
+    <span class="tab" onclick="showMaterialTab('裏シール')">裏シール</span>
+  </div>
+
+  <div id="material-wrapper" style="margin-top: 10px;">
+    <div id="material-袋" class="material-content">
+      <table>
+        <thead><tr><th>品名</th><th>在庫</th><th>操作</th></tr></thead>
+        <tbody id="袋-body"></tbody>
+      </table>
+    </div>
+    <div id="material-表シール" class="material-content hidden">
+      <table>
+        <thead><tr><th>品名</th><th>在庫</th><th>操作</th></tr></thead>
+        <tbody id="表シール-body"></tbody>
+      </table>
+    </div>
+    <div id="material-裏シール" class="material-content hidden">
+      <table>
+        <thead><tr><th>品名</th><th>在庫</th><th>操作</th></tr></thead>
+        <tbody id="裏シール-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- 半完成品 -->
+<div id="semi" class="tab-content hidden">
+  <table>
+    <thead><tr><th>品名</th><th>在庫</th><th>操作</th></tr></thead>
+    <tbody id="semi-body"></tbody>
+  </table>
+</div>
+
+<!-- 完成品 -->
+<div id="finished" class="tab-content hidden">
+  <table>
+    <thead><tr><th>品名</th><th>在庫</th><th>操作</th></tr></thead>
+    <tbody id="finished-body"></tbody>
+  </table>
+</div>
+
+
+<script>
+ function showTab(tabId) {
+  // コンテンツ切り替え
+  document.querySelectorAll(".tab-content").forEach(div => div.classList.add("hidden"));
+  document.getElementById(tabId).classList.remove("hidden");
+
+  // タブボタンの active 切り替え
+  const tabs = document.querySelectorAll("div > .tab"); // すべての .tab を取得
+  tabs.forEach(tab => tab.classList.remove("active"));
+  
+  // 今クリックしたタブを active に（←これ重要！）
+  event.target.classList.add("active");
+
+  if (tabId === 'packaging') {
+    showMaterialTab('袋');
+  }
+}
+
+function showMaterialTab(type) {
+  // 包材カテゴリ切替
+  document.querySelectorAll("#material-wrapper .material-content").forEach(div => div.classList.add("hidden"));
+  document.getElementById("material-" + type).classList.remove("hidden");
+
+  // 包材カテゴリボタンの .active 切替
+  const materialTabs = document.querySelectorAll("#packaging > div > .tab");
+  materialTabs.forEach(tab => tab.classList.remove("active"));
+  event.target.classList.add("active");
+}
+
+
+
+  // 在庫読み込み（API）
+  async function loadInventory() {
+    const res = await fetch("/api/inventory");
+    const data = await res.json();
+    renderInventory(data);
+  }
+
+  // カテゴリごとに分けて表示
+  function renderInventory(data) {
+  const semiBody = document.getElementById("semi-body");
+  const finishedBody = document.getElementById("finished-body");
+  const materialBodies = {
+    "袋": document.getElementById("袋-body"),
+    "表シール": document.getElementById("表シール-body"),
+    "裏シール": document.getElementById("裏シール-body")
+  };
+
+  semiBody.innerHTML = "";
+  finishedBody.innerHTML = "";
+  Object.values(materialBodies).forEach(tb => tb.innerHTML = "");
+
+  data.forEach(item => {
+    if (item.category === "semi") {
+      if (item.stock > 0) {
+        const row = createRow(item);
+        semiBody.appendChild(row);
+      }
+    } else if (item.category === "finished") {
+      if (item.stock > 0) {
+        const row = createRow(item);
+        finishedBody.appendChild(row);
+      }
+    } else if (item.category === "material") {
+      const row = createRow(item);
+      materialBodies[item.type].appendChild(row);
+    }
+  });
+}
+
+function createRow(item) {
+  const row = document.createElement("tr");
+  const low = item.stock <= item.threshold ? ' style="background-color:#ffebee;"' : '';
+  const qtyInput = `<input type="number" id="qty-${item.id}" value="1" min="1" style="width: 60px; margin-right: 4px;">`;
+
+  let buttons = `
+    ${qtyInput}
+    <button onclick="adjustStock(${item.id}, '${item.category}', -1)">使用</button>
+    <button onclick="adjustStock(${item.id}, '${item.category}', 1)">戻し</button>
+  `;
+
+  // 半完成品 or 完成品なら「作業予定に追加」ボタンも追加
+  if (item.category === "semi" || item.category === "finished") {
+    buttons += `<button onclick="registerWork(${item.id}, '${item.category}')">作業予定に追加</button>`;
+  }
+
+  row.innerHTML = `
+    <td>${item.name}</td>
+    <td${low}>${item.stock}</td>
+    <td>${buttons}</td>
+  `;
+  return row;
+}
+
+
+  // 使用・戻し
+ async function adjustStock(id, category, direction) {
+  const qtyInput = document.getElementById(`qty-${id}`);
+  const changeAmount = qtyInput ? parseInt(qtyInput.value) || 1 : 1;
+  const change = direction * changeAmount;
+
+  const action = direction > 0 ? "戻し" : "使用";
+  const comment = prompt(`「${action}」のコメントを入力してください：`);
+  if (comment === null) return;
+
+  const res = await fetch("/api/inventory/adjust", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id, category, change, comment })
+  });
+
+  if (res.ok) {
+    loadInventory();
+  } else {
+    alert("在庫更新に失敗しました。");
+  }
+}
+
+
+
+  // 作業登録（作業予定に追加）
+  async function registerWork(id, category) {
+    const quantity = prompt("作業枚数を入力してください：");
+    if (!quantity || isNaN(quantity)) {
+      alert("正しい枚数を入力してください。");
+      return;
+    }
+
+    const res = await fetch("/api/schedules", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        product_type: category,
+        product_id: id,
+        quantity: parseInt(quantity),
+        comment: "在庫画面から登録"
+      })
+    });
+
+    if (res.ok) {
+      alert("作業予定に登録しました！");
+    } else {
+      alert("作業登録に失敗しました");
+    }
+  }
+
+  window.onload = loadInventory;
+</script>
+
+
+</body>
+</html>

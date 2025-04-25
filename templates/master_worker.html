@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>作業者マスタ管理</title>
+  <style>
+    body {
+      font-family: "Noto Sans JP", sans-serif;
+      background: #f4f6f8;
+      margin: 20px;
+    }
+    h1 {
+      font-size: 22px;
+      margin-bottom: 16px;
+    }
+    input {
+      padding: 6px;
+      margin: 4px;
+    }
+    button {
+      padding: 6px 12px;
+      margin-left: 4px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    .delete-btn {
+      background-color: #dc3545;
+      margin-left: 6px;
+    }
+    .delete-btn:hover {
+      background-color: #a71d2a;
+    }
+    .inactive {
+      background-color: #f0f0f0;
+      color: #888;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      background: #fff;
+    }
+    th, td {
+      padding: 10px;
+      border: 1px solid #ddd;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+<!-- ナビゲーションバー -->
+<nav style="background-color: #f5f5f5; padding: 10px 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); font-family: 'Noto Sans JP', 'Meiryo', sans-serif; display: flex; flex-direction: column; gap: 10px;">
+  <!-- 1列目 -->
+  <div>
+    <a href="/inventory" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">📦 在庫一覧</a>
+    <a href="/work_schedule" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">📝 作業予定</a>
+    <a href="/shipment" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">🚚 出荷予定</a>
+    <a href="/dispatch" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">📤 蔵出し</a>
+    <a href="/arrival" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">📥 包材入荷</a>
+    <a href="/stock_adjust" style="text-decoration: none; color: #333; font-weight: bold;">🧮 棚卸し</a>
+  </div>
+
+  <!-- 2列目 -->
+  <div>
+    <a href="/master_material" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">🏷 包材マスタ</a>
+    <a href="/master_semi" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">🧩 半完成品マスタ</a>
+    <a href="/master_finished" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">🎯 完成品マスタ</a>
+    <a href="/master_worker" style="text-decoration: none; color: #333; font-weight: bold;">👤 作業者マスタ</a>
+  </div>
+
+  <!-- 3列目 -->
+  <div>
+    <a href="/work_log" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">📂 作業ログ</a>
+    <a href="/stock_adjust_logs" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">🧮 棚卸し履歴</a>
+    <a href="/arrival_logs" style="text-decoration: none; color: #333; font-weight: bold;">📥 包材入荷履歴</a>
+  </div>
+</nav>
+
+
+  <h1>作業者マスタ管理</h1>
+
+  <form onsubmit="return addWorker();">
+    <input type="text" id="worker-name" placeholder="作業者名" required />
+    <button type="submit">追加</button>
+  </form>
+
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th><th>作業者名</th><th>登録日</th><th>操作</th>
+      </tr>
+    </thead>
+    <tbody id="worker-list"></tbody>
+  </table>
+
+  <script>
+    function addWorker() {
+      const name = document.getElementById("worker-name").value;
+
+      fetch("/api/workers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name })
+      })
+      .then(res => res.json())
+      .then(() => {
+        document.getElementById("worker-name").value = "";
+        loadWorkers();
+      });
+
+      return false;
+    }
+
+    function loadWorkers() {
+      fetch("/api/workers")
+        .then(res => res.json())
+        .then(data => {
+          const list = document.getElementById("worker-list");
+          list.innerHTML = "";
+          data.forEach(w => {
+            const row = document.createElement("tr");
+            if (!w.is_active) row.classList.add("inactive");
+            row.innerHTML = `
+              <td>${w.id}</td>
+              <td>${w.name}</td>
+              <td>${w.created_at}</td>
+              <td>
+                <button onclick="toggleWorker(${w.id})">${w.is_active ? '無効化' : '有効化'}</button>
+                <button onclick="deleteWorker(${w.id})" class="delete-btn">削除</button>
+              </td>
+            `;
+            list.appendChild(row);
+          });
+        });
+    }
+
+    function toggleWorker(id) {
+      fetch(`/api/workers/${id}/toggle`, { method: "PATCH" })
+        .then(() => loadWorkers());
+    }
+
+    function deleteWorker(id) {
+      if (!confirm("この作業者を削除しますか？")) return;
+      fetch(`/api/workers/${id}`, { method: "DELETE" })
+        .then(() => loadWorkers());
+    }
+
+    window.onload = () => loadWorkers();
+  </script>
+</body>
+</html>

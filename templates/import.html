@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>CSVインポート（作業予定）</title>
+  <style>
+    body {
+      font-family: "Noto Sans JP", "Meiryo", sans-serif;
+      background-color: #f4f6f8;
+      margin: 20px;
+      color: #333;
+    }
+    h1 {
+      font-size: 24px;
+      margin-bottom: 20px;
+    }
+    input[type="file"] {
+      margin-bottom: 10px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background-color: #fff;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+      margin-top: 20px;
+    }
+    th, td {
+      padding: 10px;
+      border: 1px solid #ddd;
+      text-align: left;
+      font-size: 14px;
+    }
+    .error {
+      background-color: #ffe5e5;
+    }
+    .success {
+      background-color: #e5ffe5;
+    }
+    button {
+      padding: 6px 12px;
+      margin-top: 10px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+  </style>
+</head>
+<body>
+<!-- ナビゲーションバー -->
+<nav style="background-color: #f5f5f5; padding: 10px 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); font-family: 'Noto Sans JP', 'Meiryo', sans-serif; display: flex; flex-direction: column; gap: 10px;">
+  <!-- 1列目 -->
+  <div>
+    <a href="/inventory" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">📦 在庫一覧</a>
+    <a href="/work_schedule" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">📝 作業予定</a>
+    <a href="/shipment" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">🚚 出荷予定</a>
+    <a href="/dispatch" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">📤 蔵出し</a>
+    <a href="/arrival" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">📥 包材入荷</a>
+    <a href="/stock_adjust" style="text-decoration: none; color: #333; font-weight: bold;">🧮 棚卸し</a>
+  </div>
+
+  <!-- 2列目 -->
+  <div>
+    <a href="/master_material" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">🏷 包材マスタ</a>
+    <a href="/master_semi" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">🧩 半完成品マスタ</a>
+    <a href="/master_finished" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">🎯 完成品マスタ</a>
+    <a href="/master_worker" style="text-decoration: none; color: #333; font-weight: bold;">👤 作業者マスタ</a>
+  </div>
+
+  <!-- 3列目 -->
+  <div>
+    <a href="/work_log" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">📂 作業ログ</a>
+    <a href="/stock_adjust_logs" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">🧮 棚卸し履歴</a>
+    <a href="/arrival_logs" style="text-decoration: none; color: #333; font-weight: bold;">📥 包材入荷履歴</a>
+  </div>
+</nav>
+
+  <h1>CSVインポート（作業予定）</h1>
+  <input type="file" id="csvFile" accept=".csv" />
+  <button onclick="importCSV()">インポート</button>
+  <button onclick="registerValidRows()">登録実行</button>
+
+  <table id="resultTable">
+    <thead>
+      <tr>
+        <th>タイプ</th>
+        <th>製品名</th>
+        <th>作業者</th>
+        <th>枚数</th>
+        <th>コメント</th>
+        <th>状態</th>
+        <th>操作</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    function importCSV() {
+      const fileInput = document.getElementById('csvFile');
+      const tableBody = document.querySelector('#resultTable tbody');
+      tableBody.innerHTML = "";
+
+      if (!fileInput.files.length) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const lines = e.target.result.split('\n');
+        lines.forEach((line, index) => {
+          if (!line.trim()) return;
+          const [type, product, worker, quantity, comment] = line.split(',');
+          const isValid = type && product && !isNaN(parseInt(quantity));
+
+          const row = document.createElement('tr');
+          row.className = isValid ? 'success' : 'error';
+
+          row.innerHTML = `
+            <td contenteditable="true">${type || ''}</td>
+            <td contenteditable="true">${product || ''}</td>
+            <td contenteditable="true">${worker || ''}</td>
+            <td contenteditable="true">${quantity || ''}</td>
+            <td contenteditable="true">${comment || ''}</td>
+            <td>${isValid ? 'OK' : 'エラー'}</td>
+            <td>${!isValid ? '<button onclick="retryValidate(this)">再チェック</button>' : ''}</td>
+          `;
+
+          tableBody.appendChild(row);
+        });
+      };
+      reader.readAsText(fileInput.files[0]);
+    }
+
+    function retryValidate(btn) {
+      const row = btn.closest('tr');
+      const cells = row.querySelectorAll('td');
+      const type = cells[0].textContent.trim();
+      const product = cells[1].textContent.trim();
+      const quantity = parseInt(cells[3].textContent.trim());
+      const isValid = type && product && !isNaN(quantity);
+
+      if (isValid) {
+        row.className = 'success';
+        cells[5].textContent = 'OK';
+        cells[6].innerHTML = '';
+      } else {
+        alert('まだ不正な値があります');
+      }
+    }
+
+    function registerValidRows() {
+      const tableBody = document.querySelector('#resultTable tbody');
+      const rows = tableBody.querySelectorAll('tr.success');
+      const results = [];
+
+      rows.forEach(row => {
+        const cells = row.querySelectorAll('td');
+        const data = {
+          type: cells[0].textContent.trim(),
+          product: cells[1].textContent.trim(),
+          worker: cells[2].textContent.trim(),
+          quantity: parseInt(cells[3].textContent.trim()),
+          comment: cells[4].textContent.trim(),
+        };
+        results.push(data);
+      });
+
+      console.log("登録されたデータ：", results);
+      alert(`${results.length} 件の作業予定を登録しました！`);
+    }
+  </script>
+</body>
+</html>

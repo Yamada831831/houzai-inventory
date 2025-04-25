@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>半完成品マスタ管理</title>
+  <style>
+    body {
+      font-family: "Noto Sans JP", "Meiryo", sans-serif;
+      background-color: #f4f6f8;
+      margin: 20px;
+    }
+    h1 {
+      font-size: 22px;
+      margin-bottom: 20px;
+    }
+    input {
+      padding: 6px;
+      margin: 4px;
+    }
+    button {
+      padding: 6px 12px;
+      margin-left: 4px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    .delete-btn {
+      background-color: #dc3545;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      background-color: #fff;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+    }
+    th, td {
+      padding: 10px;
+      border: 1px solid #ddd;
+      font-size: 14px;
+      text-align: left;
+    }
+    .inactive {
+      background-color: #f0f0f0;
+      color: #aaa;
+    }
+  </style>
+</head>
+<body>
+<!-- ナビゲーションバー -->
+<nav style="background-color: #f5f5f5; padding: 10px 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); font-family: 'Noto Sans JP', 'Meiryo', sans-serif; display: flex; flex-direction: column; gap: 10px;">
+  <!-- 1列目 -->
+  <div>
+    <a href="/inventory" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">📦 在庫一覧</a>
+    <a href="/work_schedule" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">📝 作業予定</a>
+    <a href="/shipment" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">🚚 出荷予定</a>
+    <a href="/dispatch" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">📤 蔵出し</a>
+    <a href="/arrival" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">📥 包材入荷</a>
+    <a href="/stock_adjust" style="text-decoration: none; color: #333; font-weight: bold;">🧮 棚卸し</a>
+  </div>
+
+  <!-- 2列目 -->
+  <div>
+    <a href="/master_material" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">🏷 包材マスタ</a>
+    <a href="/master_semi" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">🧩 半完成品マスタ</a>
+    <a href="/master_finished" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">🎯 完成品マスタ</a>
+    <a href="/master_worker" style="text-decoration: none; color: #333; font-weight: bold;">👤 作業者マスタ</a>
+  </div>
+
+  <!-- 3列目 -->
+  <div>
+    <a href="/work_log" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">📂 作業ログ</a>
+    <a href="/stock_adjust_logs" style="margin-right: 15px; text-decoration: none; color: #333; font-weight: bold;">🧮 棚卸し履歴</a>
+    <a href="/arrival_logs" style="text-decoration: none; color: #333; font-weight: bold;">📥 包材入荷履歴</a>
+  </div>
+</nav>
+
+  <h1>半完成品マスタ管理</h1>
+
+<!-- 新規追加フォーム -->
+<form onsubmit="addSemi(); return false;">
+  <select id="label" required>
+    <option value="">表シールを選択</option>
+  </select>
+  <select id="bag" required>
+    <option value="">袋を選択</option>
+  </select>
+  <input type="number" id="threshold" placeholder="作業依頼ポイント (〇〇枚以下)" required>
+  <input type="number" id="replenish" placeholder="作業指示枚数 (〇〇枚作業)" required>
+  <button type="submit">追加</button>
+</form>
+
+<!-- 一覧表示 -->
+<table>
+  <thead>
+    <tr>
+      <th>ID</th><th>表シール名</th><th>袋名</th>
+      <th>作業依頼ポイント</th><th>作業指示枚数</th><th>操作</th>
+    </tr>
+  </thead>
+  <tbody id="semi-list"></tbody>
+</table>
+
+<script>
+const semiList = document.getElementById("semi-list");
+
+function addSemi() {
+  const labelId = parseInt(document.getElementById("label").value);
+  const bagId = parseInt(document.getElementById("bag").value);
+  const threshold = parseInt(document.getElementById("threshold").value);
+  const replenish = parseInt(document.getElementById("replenish").value);
+
+  fetch("/api/semi_products", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ label_material_id: labelId, bag_material_id: bagId, threshold, replenish_quantity: replenish })
+  }).then(res => res.json()).then(() => location.reload());
+}
+
+function updateSemi(id) {
+  const threshold = parseInt(document.getElementById(`threshold-${id}`).value);
+  const replenish = parseInt(document.getElementById(`replenish-${id}`).value);
+
+  fetch(`/api/semi_products/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ threshold, replenish_quantity: replenish })
+  }).then(res => res.json()).then(() => loadSemiProducts());
+}
+
+function loadSemiProducts() {
+  fetch("/api/semi_products")
+    .then(res => res.json())
+    .then(data => {
+      semiList.innerHTML = "";
+      data.forEach((s) => {
+        const row = document.createElement("tr");
+        if (!s.is_active) row.classList.add("inactive");
+        row.innerHTML = `
+          <td>${s.id}</td>
+          <td>${s.label}</td>
+          <td>${s.bag}</td>
+          <td><input type="number" id="threshold-${s.id}" value="${s.threshold}" style="width:80px;"></td>
+          <td><input type="number" id="replenish-${s.id}" value="${s.replenish_quantity}" style="width:80px;"></td>
+          <td>
+            <button onclick="updateSemi(${s.id})">更新</button>
+            <button onclick="toggleSemi(${s.id})">${s.is_active ? '無効化' : '有効化'}</button>
+            <button class="delete-btn" onclick="deleteSemi(${s.id})">削除</button>
+          </td>
+        `;
+        semiList.appendChild(row);
+      });
+    });
+}
+
+function loadMaterials() {
+  fetch("/api/materials")
+    .then(res => res.json())
+    .then(data => {
+      const labelSelect = document.getElementById("label");
+      const bagSelect = document.getElementById("bag");
+      data.forEach(m => {
+        const opt = document.createElement("option");
+        opt.value = m.id;
+        opt.textContent = m.name;
+        if (m.type === "表シール") labelSelect.appendChild(opt);
+        else if (m.type === "袋") bagSelect.appendChild(opt);
+      });
+    });
+}
+
+function toggleSemi(id) {
+  fetch(`/api/semi_products/${id}/toggle`, { method: "PATCH" })
+    .then(res => res.json()).then(() => loadSemiProducts());
+}
+
+function deleteSemi(id) {
+  if (!confirm("この半完成品マスタを完全に削除しますか？")) return;
+  fetch(`/api/semi_products/${id}`, { method: "DELETE" })
+    .then(res => res.json()).then(() => loadSemiProducts());
+}
+
+window.onload = () => {
+  loadSemiProducts();
+  loadMaterials();
+};
+</script>
+
