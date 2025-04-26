@@ -150,10 +150,12 @@
     </div>
   </form>
 
+<button onclick="bulkPrint()" style="margin: 10px;">✅ 選択した依頼書を印刷</button>
+
   <table>
     <thead>
       <tr>
-        <th>タイプ</th><th>製品名</th><th>作業者</th><th>枚数</th><th>JAN下6桁</th><th>ステータス</th><th>コメント</th><th>操作</th>
+        <th>選択</th><th>タイプ</th><th>製品名</th><th>作業者</th><th>枚数</th><th>JAN下6桁</th><th>ステータス</th><th>コメント</th><th>操作</th>
       </tr>
     </thead>
     <tbody id="schedule-list"></tbody>
@@ -244,6 +246,7 @@ function updateSchedule(id) {
       row.className = className;
 
       row.innerHTML = `
+        <td><input type="checkbox" class="schedule-checkbox" data-id="${item.id}"></td>
         <td>${item.product_type === 'semi' ? '半完成品' : '完成品'}</td>
         <td>${item.product_name || 'ID:' + item.product_id}</td>
         <td>
@@ -292,6 +295,22 @@ async function printSchedule(id) {
 
   // 印刷ページを新しいタブで開く
   window.open(`/print_request?id=${id}`, "_blank");
+}
+
+async function bulkPrint() {
+  const checked = document.querySelectorAll(".schedule-checkbox:checked");
+  if (checked.length === 0) {
+    alert("印刷する作業予定を選んでください！");
+    return;
+  }
+
+  for (const checkbox of checked) {
+    const id = checkbox.getAttribute("data-id");
+    await updateStatus(id, "依頼済");  // ステータスを「依頼済」に変更
+    window.open(`/print_request?id=${id}`, "_blank"); // 依頼書を新タブで開く
+  }
+
+  loadSchedules(); // 作業予定リロード
 }
 
 
