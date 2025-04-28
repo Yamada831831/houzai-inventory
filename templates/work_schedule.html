@@ -231,12 +231,12 @@ async function loadSchedules() {
 }
 
 
-function updateSchedule(id) {
+function updateSchedule(id, silent = false) {
   const qty = document.getElementById(`qty-${id}`).value;
   const jan = document.getElementById(`jan-${id}`).value;
   const worker = document.getElementById(`worker-${id}`).value || null;
 
-  fetch(`/api/schedules/${id}`, {
+  return fetch(`/api/schedules/${id}`, {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
@@ -249,11 +249,14 @@ function updateSchedule(id) {
   })
     .then((res) => res.json())
     .then((data) => {
-      alert(data.message || "更新しました！");
-      loadSchedules();
+      if (!silent) {
+        alert(data.message || "更新しました！");
+      }
+      return data;
     })
     .catch((err) => console.error("更新エラー:", err));
 }
+
 
 
     function updateProductOptions() {
@@ -345,13 +348,14 @@ async function bulkUpdate() {
     alert("更新する作業予定を選んでください！");
     return;
   }
-  if (!confirm("選択した作業予定をまとめて更新しますか？")) return;
+  if (!confirm(`選択された ${checked.length} 件の作業予定をまとめて更新しますか？`)) return;
 
   for (const checkbox of checked) {
     const id = checkbox.getAttribute("data-id");
-    await updateSchedule(id);
+    await updateSchedule(id, true); // ここで「サイレントモード」で更新
   }
 
+  alert(`${checked.length} 件の作業予定を更新しました！`);
   loadSchedules();
 }
 
@@ -361,13 +365,14 @@ async function bulkComplete() {
     alert("完了する作業予定を選んでください！");
     return;
   }
-  if (!confirm("選択した作業予定をまとめて完了しますか？")) return;
+  if (!confirm(`選択された ${checked.length} 件の作業予定をまとめて完了しますか？`)) return;
 
   for (const checkbox of checked) {
     const id = checkbox.getAttribute("data-id");
     await completeSchedule(id);
   }
 
+  alert(`${checked.length} 件の作業予定を完了しました！`);
   loadSchedules();
 }
 
@@ -377,13 +382,14 @@ async function bulkDelete() {
     alert("削除する作業予定を選んでください！");
     return;
   }
-  if (!confirm("選択した作業予定をまとめて削除しますか？")) return;
+  if (!confirm(`選択された ${checked.length} 件の作業予定をまとめて削除しますか？`)) return;
 
   for (const checkbox of checked) {
     const id = checkbox.getAttribute("data-id");
     await deleteSchedule(id);
   }
 
+  alert(`${checked.length} 件の作業予定を削除しました！`);
   loadSchedules();
 }
 
@@ -394,6 +400,7 @@ async function bulkPrint() {
     alert("印刷する作業予定を選んでください！");
     return;
   }
+  if (!confirm(`選択された ${checked.length} 件の作業予定をまとめて印刷しますか？`)) return;
 
   for (const checkbox of checked) {
     const id = checkbox.getAttribute("data-id");
@@ -403,6 +410,7 @@ async function bulkPrint() {
 
   loadSchedules(); // 作業予定リロード
 }
+
 
 
     async function deleteSchedule(id) {
