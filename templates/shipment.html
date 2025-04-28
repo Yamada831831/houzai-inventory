@@ -152,7 +152,7 @@
     "規格": size,
     "産地": origin,
     "入数": pack,
-    "JAN": document.getElementById("manualJan").value.trim(), // ← 空欄OK
+    "JANコード": document.getElementById("manualJan").value.trim(), // ← 空欄OK
     "月": parseInt(document.getElementById("mon").value) || 0,
     "火": parseInt(document.getElementById("tue").value) || 0,
     "水": parseInt(document.getElementById("wed").value) || 0,
@@ -195,7 +195,7 @@
       if (!finishedId) tr.classList.add("error-row");
 
       // 表示カラム一覧
-      const keys = ["商品名", "出荷先", "規格", "産地", "入数", "JAN", "月", "火", "水", "木", "金", "土", "日"];
+      const keys = ["商品名", "出荷先", "規格", "産地", "入数", "JANコード", "月", "火", "水", "木", "金", "土", "日"];
       keys.forEach(k => {
         const td = document.createElement("td");
         td.textContent = item[k] || "";

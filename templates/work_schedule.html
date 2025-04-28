@@ -155,7 +155,16 @@
   <table>
     <thead>
       <tr>
-        <th>選択</th><th>タイプ</th><th>製品名</th><th>作業者</th><th>枚数</th><th>JAN下6桁</th><th>ステータス</th><th>コメント</th><th>操作</th>
+        <th>選択</th>
+        <th onclick="sortTable('id')">依頼No.</th>
+        <th onclick="sortTable('product_type')">タイプ</th>
+        <th onclick="sortTable('product_name')">製品名</th>
+        <th onclick="sortTable('worker_name')">作業者</th>
+        <th onclick="sortTable('quantity')">枚数</th>
+        <th onclick="sortTable('jan_code')">JAN下6桁</th>
+        <th onclick="sortTable('status')">ステータス</th>
+        <th onclick="sortTable('comment')">コメント</th>
+        <th>操作</th>
       </tr>
     </thead>
     <tbody id="schedule-list"></tbody>
@@ -191,6 +200,46 @@ async function loadWorkers() {
     workerSelect.innerHTML = '<option value="">（未選択）</option>' +
       workers.map(w => `<option value="${w.id}">${w.name}</option>`).join("");
   }
+}
+
+let currentSortColumn = null;
+let currentSortOrder = 'asc'; // 最初は昇順
+
+function sortTable(column) {
+  if (currentSortColumn === column) {
+    // 同じ列を押したら順番ひっくり返す
+    currentSortOrder = currentSortOrder === 'asc' ? 'desc' : 'asc';
+  } else {
+    // 違う列押したら、新しい列で昇順に
+    currentSortColumn = column;
+    currentSortOrder = 'asc';
+  }
+  loadSchedules(); // ソートして再読み込み！
+}
+
+async function loadSchedules() {
+  const res = await fetch("/api/schedules");
+  let data = await res.json();
+
+  if (currentSortColumn) {
+    data.sort((a, b) => {
+      let valA = a[currentSortColumn] || "";
+      let valB = b[currentSortColumn] || "";
+
+      // 数字っぽかったら数字比較する
+      if (!isNaN(valA) && !isNaN(valB)) {
+        valA = Number(valA);
+        valB = Number(valB);
+      }
+
+      if (valA < valB) return currentSortOrder === 'asc' ? -1 : 1;
+      if (valA > valB) return currentSortOrder === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }
+
+  list.innerHTML = "";
+  data.forEach(addRow);
 }
 
 
@@ -233,12 +282,7 @@ function updateSchedule(id) {
 
     typeSelect.addEventListener("change", updateProductOptions);
 
-    async function loadSchedules() {
-      const res = await fetch("/api/schedules");
-      const data = await res.json();
-      list.innerHTML = "";
-      data.forEach(addRow);
-    }
+    
 
     function addRow(item) {
       const row = document.createElement("tr");
@@ -247,6 +291,7 @@ function updateSchedule(id) {
 
       row.innerHTML = `
         <td><input type="checkbox" class="schedule-checkbox" data-id="${item.id}"></td>
+        <td>${item.id}</td>
         <td>${item.product_type === 'semi' ? '半完成品' : '完成品'}</td>
         <td>${item.product_name || 'ID:' + item.product_id}</td>
         <td>

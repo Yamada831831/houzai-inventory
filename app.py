@@ -33,34 +33,59 @@ def register_shipments():
     conn = get_connection()
     cur = conn.cursor()
 
-    inserted = 0
+    temp = {}
 
     for item in shipments:
         product_id = item.get("finished_id")
         if not product_id:
             continue
 
-        # 入数 × 各曜日の数量
-        pack = int(item.get("入数", 0))
+        pack = int(item.get("入数", 0) or 0)
+        raw_jan = item.get("JANコード", "")
+        if raw_jan is None:
+            jan_code = ""
+        else:
+            raw_jan = str(raw_jan)
+            if len(raw_jan) == 5:
+                jan_code = "0" + raw_jan
+            else:
+                jan_code = raw_jan
+
         for day in ["月", "火", "水", "木", "金", "土", "日"]:
-            qty = int(item.get(day, 0))
+            raw_qty = item.get(day)
+            try:
+                qty = int(raw_qty) if raw_qty not in [None, ""] else 0
+            except ValueError:
+                qty = 0
+
             if qty <= 0:
                 continue
 
             total_qty = pack * qty
-            comment = f"出荷予定インポート: {day}"
 
-            cur.execute("""
-                INSERT INTO work_schedules (product_type, product_id, quantity, comment)
-                VALUES ('finished', %s, %s, %s)
-            """, (product_id, total_qty, comment))
-            inserted += 1
+            key = (product_id, day, jan_code)
+
+            if key in temp:
+                temp[key] += total_qty
+            else:
+                temp[key] = total_qty
+
+    inserted = 0
+    for (product_id, day, jan_code), total_qty in temp.items():
+        comment = f"出荷予定インポート: {day}"
+        cur.execute("""
+            INSERT INTO work_schedules (product_type, product_id, quantity, comment, jan_code)
+            VALUES ('finished', %s, %s, %s, %s)
+        """, (product_id, total_qty, comment, jan_code))
+        inserted += 1
 
     conn.commit()
     cur.close()
     conn.close()
 
     return jsonify({"message": f"{inserted} 件の作業予定を登録しました。"})
+
+
 
 @app.route("/api/finished_products/lookup", methods=["POST"])
 def lookup_finished_product():
