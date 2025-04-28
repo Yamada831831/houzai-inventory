@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>設定・ログメニュー</title>
+  <style>
+    body {
+      font-family: "Noto Sans JP", "Meiryo", sans-serif;
+      background-color: #f4f6f8;
+      margin: 20px;
+      color: #333;
+    }
+    h1 {
+      font-size: 24px;
+      margin-bottom: 20px;
+    }
+    nav.top-nav {
+      background-color: #f5f5f5;
+      padding: 10px 20px;
+      margin-bottom: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    nav.top-nav a {
+      text-decoration: none;
+      color: #333;
+      font-weight: bold;
+    }
+    .grid-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 40px;
+    }
+    .section {
+      background-color: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    }
+    .section h2 {
+      font-size: 18px;
+      margin-bottom: 15px;
+    }
+    .section a {
+      display: block;
+      margin-bottom: 10px;
+      text-decoration: none;
+      color: #333;
+      font-weight: bold;
+    }
+    .section a:hover {
+      color: #007bff;
+    }
+  </style>
+</head>
+<body>
+
+<!-- 1列目ナビ -->
+<nav class="top-nav">
+  <a href="/inventory">📦 在庫一覧</a>
+  <a href="/work_schedule">📝 作業予定</a>
+  <a href="/shipment">🚚 出荷予定</a>
+  <a href="/dispatch">📤 蔵出し</a>
+  <a href="/arrival">📥 包材入荷</a>
+  <a href="/stock_adjust">🧮 棚卸し</a>
+  <a href="/setting_logs">⚙️ 設定・ログ</a>
+</nav>
+
+<h1>⚙️ 設定・ログメニュー</h1>
+
+<!-- マスタ系・ログ系 2列並び -->
+<div class="grid-container">
+  
+  <!-- マスタ系 -->
+  <div class="section">
+    <h2>マスタ管理</h2>
+    <a href="/master_material">🏷 包材マスタ</a>
+    <a href="/master_semi">🧩 半完成品マスタ</a>
+    <a href="/master_finished">🎯 完成品マスタ</a>
+    <a href="/master_worker">👤 作業者マスタ</a>
+  </div>
+
+  <!-- ログ系 -->
+  <div class="section">
+    <h2>ログ管理</h2>
+    <a href="/work_log">📂 作業ログ</a>
+    <a href="/stock_adjust_logs">🧮 棚卸し履歴</a>
+    <a href="/arrival_logs">📥 包材入荷履歴</a>
+  </div>
+
+</div>
+
+</body>
+</html>

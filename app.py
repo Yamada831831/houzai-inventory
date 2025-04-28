@@ -1231,6 +1231,11 @@ def arrival():
 def arrival_logs_page():
     return render_template("arrival_logs.html")
 
+@app.route("/setting_logs")
+def setting_logs_page():
+    return render_template("setting_logs.html")
+
+
 
 
 
