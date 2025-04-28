@@ -133,7 +133,12 @@
     </div>
   </form>
 
-<button onclick="bulkPrint()" style="margin: 10px;">✅ 選択した依頼書を印刷</button>
+<button onclick="selectAll()" style="margin: 10px;">☑️ 全て選択</button>
+<button onclick="selectNone()" style="margin: 10px;">❎ 選択解除</button>
+<button onclick="bulkUpdate()" style="margin: 10px;">🛠 選択更新</button>
+<button onclick="bulkPrint()" style="margin: 10px;">🖨 選択印刷</button>
+<button onclick="bulkComplete()" style="margin: 10px;">🏁 選択完了</button>
+<button onclick="bulkDelete()" style="margin: 10px;">🗑 選択削除</button>
 
   <table>
     <thead>
@@ -324,6 +329,64 @@ async function printSchedule(id) {
   // 印刷ページを新しいタブで開く
   window.open(`/print_request?id=${id}`, "_blank");
 }
+
+function selectAll() {
+  document.querySelectorAll(".schedule-checkbox").forEach(cb => cb.checked = true);
+}
+
+function selectNone() {
+  document.querySelectorAll(".schedule-checkbox").forEach(cb => cb.checked = false);
+}
+
+
+async function bulkUpdate() {
+  const checked = document.querySelectorAll(".schedule-checkbox:checked");
+  if (checked.length === 0) {
+    alert("更新する作業予定を選んでください！");
+    return;
+  }
+  if (!confirm("選択した作業予定をまとめて更新しますか？")) return;
+
+  for (const checkbox of checked) {
+    const id = checkbox.getAttribute("data-id");
+    await updateSchedule(id);
+  }
+
+  loadSchedules();
+}
+
+async function bulkComplete() {
+  const checked = document.querySelectorAll(".schedule-checkbox:checked");
+  if (checked.length === 0) {
+    alert("完了する作業予定を選んでください！");
+    return;
+  }
+  if (!confirm("選択した作業予定をまとめて完了しますか？")) return;
+
+  for (const checkbox of checked) {
+    const id = checkbox.getAttribute("data-id");
+    await completeSchedule(id);
+  }
+
+  loadSchedules();
+}
+
+async function bulkDelete() {
+  const checked = document.querySelectorAll(".schedule-checkbox:checked");
+  if (checked.length === 0) {
+    alert("削除する作業予定を選んでください！");
+    return;
+  }
+  if (!confirm("選択した作業予定をまとめて削除しますか？")) return;
+
+  for (const checkbox of checked) {
+    const id = checkbox.getAttribute("data-id");
+    await deleteSchedule(id);
+  }
+
+  loadSchedules();
+}
+
 
 async function bulkPrint() {
   const checked = document.querySelectorAll(".schedule-checkbox:checked");
