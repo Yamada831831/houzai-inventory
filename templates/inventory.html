@@ -214,17 +214,18 @@ function showMaterialTab(type) {
 function createRow(item) {
   const row = document.createElement("tr");
   const low = item.stock <= item.threshold ? ' style="background-color:#ffebee;"' : '';
+
+  // 必ずitem.idを使う！！
   const qtyInput = `<input type="number" id="qty-${item.id}" value="1" min="1" style="width: 60px; margin-right: 4px;">`;
 
   let buttons = `
     ${qtyInput}
-    <button onclick="adjustStock(${item.id}, '${item.category}', -1)">使用</button>
-    <button onclick="adjustStock(${item.id}, '${item.category}', 1)">戻し</button>
+    <button data-id="${item.id}" data-category="${item.category}" onclick="adjustStock(this, -1)">使用</button>
+    <button data-id="${item.id}" data-category="${item.category}" onclick="adjustStock(this, 1)">戻し</button>
   `;
 
-  // 半完成品 or 完成品なら「作業予定に追加」ボタンも追加
-  if (item.category === "semi" || item.category === "finished") {
-    buttons += `<button onclick="registerWork(${item.id}, '${item.category}')">作業予定に追加</button>`;
+if (item.category === "semi" || item.category === "finished") {
+    buttons += `<button data-id="${item.id}" data-category="${item.category}" onclick="registerWork(this)">作業予定に追加</button>`;
   }
 
   row.innerHTML = `
@@ -236,29 +237,55 @@ function createRow(item) {
 }
 
 
+
   // 使用・戻し
- async function adjustStock(id, category, direction) {
-  const qtyInput = document.getElementById(`qty-${id}`);
+async function adjustStock(button, direction) {
+  const id = button.getAttribute("data-id");
+  const category = button.getAttribute("data-category");
+
+  const tr = button.closest("tr");
+  const qtyInput = tr.querySelector("input[type='number']");
   const changeAmount = qtyInput ? parseInt(qtyInput.value) || 1 : 1;
-  const change = direction * changeAmount;
 
-  const action = direction > 0 ? "戻し" : "使用";
-  const comment = prompt(`「${action}」のコメントを入力してください：`);
-  if (comment === null) return;
+  // ポップアップでコメント入力させる！
+  const userComment = prompt("コメントを入力してください：", "");
+  if (userComment === null) {
+    // キャンセルされたら中断
+    return;
+  }
 
-  const res = await fetch("/api/inventory/adjust", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ id, category, change, comment })
+  console.log("送信データ:", {
+    id: id,
+    category: category,
+    change: direction * changeAmount,
+    comment: userComment
   });
 
-  if (res.ok) {
-    loadInventory();
-  } else {
-    alert("在庫更新に失敗しました。");
+  try {
+    const response = await fetch("/api/inventory/adjust", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: id,
+        category: category,
+        change: direction * changeAmount,
+        comment: userComment
+      }),
+    });
+
+    const data = await response.json();
+    console.log("サーバー応答:", data.message || data.error);
+
+    if (response.ok) {
+      loadInventory();
+    } else {
+      alert(data.error || "エラーが発生しました！");
+    }
+  } catch (error) {
+    console.error("通信エラー:", error);
+    alert("サーバーに接続できませんでした。");
   }
 }
-
 
 
   // 作業登録（作業予定に追加）

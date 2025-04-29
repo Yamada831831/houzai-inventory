@@ -72,69 +72,6 @@
     }
   </style>
 
-   <script>
-    async function renderMaterialOptions() {
-      const category = document.getElementById("category").value;
-      const res = await fetch(`/api/materials/category/${category}`);
-      const materials = await res.json();
-
-      const select = document.getElementById("materialSelect");
-      select.innerHTML = "";
-      materials.forEach(m => {
-        const opt = document.createElement("option");
-        opt.value = m.id;
-        opt.textContent = m.name;
-        select.appendChild(opt);
-      });
-    }
-
-    function addArrival() {
-      const materialId = document.getElementById("materialSelect").value;
-      const materialName = document.getElementById("materialSelect").selectedOptions[0]?.textContent || "";
-      const quantity = parseInt(document.getElementById("quantity").value);
-      const arrivalDate = document.getElementById("arrivalDate").value;
-      const comment = document.getElementById("comment").value;
-
-      if (!materialId || !quantity || !arrivalDate) {
-        alert("すべての項目を入力してください");
-        return;
-      }
-
-      const tbody = document.getElementById("arrivalList");
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${materialName}</td>
-        <td>${quantity}</td>
-        <td>${arrivalDate}</td>
-        <td>${comment}</td>
-        <td><button onclick="completeArrival(${materialId}, ${quantity}, \"${comment}\", this)">入荷完了</button></td>
-      `;
-      tbody.appendChild(tr);
-    }
-
-    async function completeArrival(materialId, quantity, comment, btn) {
-      const res = await fetch("/api/inventory/adjust", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: materialId,
-          category: "material",
-          change: quantity,
-          comment: comment || "入荷完了"
-        })
-      });
-
-      if (res.ok) {
-        alert("在庫に反映しました！");
-        btn.disabled = true;
-        btn.textContent = "完了済";
-      } else {
-        alert("在庫反映に失敗しました");
-      }
-    }
-
-    window.onload = renderMaterialOptions;
-  </script>
 </head>
 <body>
 <!-- ナビゲーションバー -->
@@ -150,7 +87,7 @@
 
   <h2>📦 包材入荷予定</h2>
 
-  <div class="form-section">
+  <div class="form-section" style="margin-bottom: 20px;">
     <div style="flex-basis: 100%; display: flex; gap: 10px; align-items: center;">
       <label>カテゴリ:</label>
       <select id="category" onchange="renderMaterialOptions()">
@@ -178,11 +115,129 @@
   </div>
 
   <h3>⏳ 入荷予定一覧</h3>
-  <table>
+  <table border="1" style="width: 100%; margin-top: 10px;">
     <thead>
-      <tr><th>包材名</th><th>数量</th><th>入荷日</th><th>コメント</th><th>操作</th></tr>
+      <tr>
+        <th>包材名</th>
+        <th>数量</th>
+        <th>入荷日</th>
+        <th>コメント</th>
+        <th>操作</th>
+      </tr>
     </thead>
     <tbody id="arrivalList"></tbody>
   </table>
+
+  <script>
+    let materials = [];
+
+    async function renderMaterialOptions() {
+      const res = await fetch("/api/materials");
+      materials = await res.json();
+
+      const category = document.getElementById("category").value;
+      const select = document.getElementById("materialSelect");
+      select.innerHTML = "";
+
+      materials
+        .filter(m => m.type === category)
+        .forEach(m => {
+          const option = document.createElement("option");
+          option.value = m.id;
+          option.textContent = m.name;
+          select.appendChild(option);
+        });
+    }
+
+async function loadArrivalList() {
+  const res = await fetch("/api/arrival_schedules");
+  const data = await res.json();
+  const tbody = document.getElementById("arrivalList");
+  tbody.innerHTML = "";
+
+  data.forEach(item => {
+    const arrivalDate = item.arrival_date
+      ? new Date(item.arrival_date).toLocaleDateString('ja-JP')
+      : "";
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${item.material_name}</td>
+      <td>${item.quantity} 枚</td>
+      <td>${arrivalDate}</td>
+      <td>${item.comment || ""}</td>
+      <td><button onclick="completeArrival(${item.id}, ${item.quantity}, this)">入荷完了</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+
+    async function addArrival() {
+      const materialId = document.getElementById("materialSelect").value;
+      const quantity = document.getElementById("quantity").value;
+      const arrivalDate = document.getElementById("arrivalDate").value;
+      const comment = document.getElementById("comment").value;
+
+      if (!materialId || !quantity) {
+        alert("包材と数量は必須やで！");
+        return;
+      }
+
+      await fetch("/api/arrival_schedules", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          material_id: materialId,
+          quantity: quantity,
+          arrival_date: arrivalDate || null,
+          comment: comment
+        })
+      });
+
+      await loadArrivalList();
+      document.getElementById("quantity").value = "";
+      document.getElementById("arrivalDate").value = "";
+      document.getElementById("comment").value = "";
+    }
+
+async function completeArrival(scheduleId, quantity, btn) {
+  if (!confirm("本当に入荷完了しますか？")) {
+    return; // キャンセルなら何もせず終了
+  }
+
+  const materialName = btn.parentNode.parentNode.children[0].textContent;
+  const materialId = getMaterialIdByName(materialName);
+
+  // 在庫に反映
+  await fetch("/api/inventory/adjust", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      id: materialId,
+      category: "material",
+      change: quantity,
+      comment: "入荷完了"
+    })
+  });
+
+  // 予定削除
+  await fetch(`/api/arrival_schedules/${scheduleId}`, {
+    method: "DELETE"
+  });
+
+  await loadArrivalList();
+}
+
+    function getMaterialIdByName(name) {
+      const material = materials.find(m => m.name === name);
+      return material ? material.id : null;
+    }
+
+    window.onload = async function() {
+      await renderMaterialOptions();
+      await loadArrivalList();
+    };
+  </script>
 </body>
 </html>

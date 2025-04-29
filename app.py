@@ -22,6 +22,64 @@ def get_connection():
 def index():
     return render_template("inventory.html")  # とりあえず在庫一覧がトップでもOK
 
+# 入荷予定一覧を取得
+@app.route("/api/arrival_schedules", methods=["GET"])
+def get_arrival_schedules():
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT s.id, m.name, s.quantity, s.arrival_date, s.comment
+        FROM material_arrival_schedules s
+        JOIN materials m ON s.material_id = m.id
+        ORDER BY s.arrival_date, s.id
+    """)
+    result = [
+        {
+            "id": r[0],
+            "material_name": r[1],
+            "quantity": r[2],
+            "arrival_date": r[3],
+            "comment": r[4]
+        }
+        for r in cur.fetchall()
+    ]
+    cur.close()
+    conn.close()
+    return jsonify(result)
+
+
+# 新しい入荷予定を登録
+@app.route("/api/arrival_schedules", methods=["POST"])
+def add_arrival_schedule():
+    data = request.get_json()
+    material_id = data["material_id"]
+    quantity = data["quantity"]
+    arrival_date = data.get("arrival_date")  # 任意
+    comment = data.get("comment", "")
+
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        INSERT INTO material_arrival_schedules (material_id, quantity, arrival_date, comment)
+        VALUES (%s, %s, %s, %s)
+    """, (material_id, quantity, arrival_date, comment))
+    conn.commit()
+    cur.close()
+    conn.close()
+    return jsonify({"message": "入荷予定を追加しました"}), 201
+
+
+# 入荷予定を削除（完了 or キャンセル）
+@app.route("/api/arrival_schedules/<int:id>", methods=["DELETE"])
+def delete_arrival_schedule(id):
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM material_arrival_schedules WHERE id = %s", (id,))
+    conn.commit()
+    cur.close()
+    conn.close()
+    return jsonify({"message": "入荷予定を削除しました"}), 200
+
 
 
 # 作業予定インポート
