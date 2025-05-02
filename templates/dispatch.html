@@ -61,8 +61,8 @@
   <table>
     <thead>
       <tr>
-        <th>製品名</th>
-        <th>在庫</th>
+        <th onclick="sortDispatchTableBy('name')" style="cursor:pointer;">製品名</th>
+        <th onclick="sortDispatchTableBy('stock')" style="cursor:pointer;">在庫</th>
         <th>数量</th>
         <th>操作</th>
       </tr>
@@ -73,6 +73,57 @@
 
   <script>
   const tbody = document.getElementById("dispatch-list");
+  let dispatchData = []; // 表示中データを保持
+  let currentSort = { column: null, asc: true };
+
+
+// テーブル描画関数（元のforEach部分を関数化）
+function renderDispatchTable(data) {
+  tbody.innerHTML = "";
+  data.forEach(item => {
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td>${item.name}</td>
+      <td class="stock">${item.stock}</td>
+      <td><input type="number" min="1" value="" /></td>
+      <td>
+        <button onclick="processDispatch(this, ${item.inventory_id}, -1)">蔵出し</button>
+        <button onclick="processDispatch(this, ${item.inventory_id}, 1)">戻し</button>
+      </td>
+    `;
+    tbody.appendChild(row);
+  });
+}
+
+// 並び替え処理
+function sortDispatchTableBy(column) {
+  const asc = currentSort.column === column ? !currentSort.asc : true;
+  currentSort = { column, asc };
+
+  const sorted = [...dispatchData].sort((a, b) => {
+    let valA = a[column];
+    let valB = b[column];
+
+    // 数値優先、文字列は日本語対応
+    if (!isNaN(valA) && !isNaN(valB)) {
+      return asc ? valA - valB : valB - valA;
+    } else {
+      return asc
+        ? valA.localeCompare(valB, 'ja', { numeric: true })
+        : valB.localeCompare(valA, 'ja', { numeric: true });
+    }
+  });
+
+  renderDispatchTable(sorted);
+}
+
+// データ取得と初期描画
+fetch("/api/dispatch")
+  .then(res => res.json())
+  .then(data => {
+    dispatchData = data;
+    renderDispatchTable(dispatchData);
+  });
 
   // ① 在庫一覧を取得
   fetch("/api/dispatch")
