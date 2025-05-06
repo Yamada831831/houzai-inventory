@@ -225,7 +225,7 @@ function createRow(item) {
   `;
 
 if (item.category === "semi" || item.category === "finished") {
-    buttons += `<button data-id="${item.id}" data-category="${item.category}" onclick="registerWork(this)">作業予定に追加</button>`;
+    buttons += `<button onclick="registerWork(${item.id}, '${item.category}')">作業予定に追加</button>`;
   }
 
   row.innerHTML = `
