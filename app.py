@@ -99,15 +99,11 @@ def register_shipments():
             continue
 
         pack = int(item.get("入数", 0) or 0)
-        raw_jan = item.get("JANコード", "")
-        if raw_jan is None:
+        raw_jan = item.get("JANコード")
+        if raw_jan is None or raw_jan == "":
             jan_code = ""
         else:
-            raw_jan = str(raw_jan)
-            if len(raw_jan) == 5:
-                jan_code = "0" + raw_jan
-            else:
-                jan_code = raw_jan
+            jan_code = str(raw_jan).zfill(6)
 
         for day in ["月", "火", "水", "木", "金", "土", "日"]:
             raw_qty = item.get(day)
@@ -758,7 +754,7 @@ def print_request():
     cur.execute("""
         SELECT ws.product_type, ws.product_id, ws.quantity, ws.jan_code,
                fp.destination, fp.product_name, fp.size, fp.origin,
-               m1.name AS label_name, m2.name AS bag_name, m3.name AS back_label_name
+               m1.name AS label_name, m2.name AS bag_name, m3.name AS back_label_name, ws.comment
         FROM work_schedules ws
         LEFT JOIN finished_products fp ON ws.product_type = 'finished' AND ws.product_id = fp.id
         LEFT JOIN semi_products sp ON (
@@ -780,6 +776,7 @@ def print_request():
     product_type = row[0]
     quantity = row[2]
     jan_code = row[3] or "JAN未登録"
+    comment = row[11]
 
     if product_type == "semi":
         label_name, bag_name = row[8], row[9]
@@ -799,6 +796,7 @@ def print_request():
                            packaging=packaging,
                            back_label_name=row[10],
                            quantity=quantity,
+                           comment=comment,
                            print_date=datetime.datetime.now().strftime("%Y-%m-%d"))
 
 

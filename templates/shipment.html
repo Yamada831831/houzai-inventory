@@ -158,6 +158,12 @@
   shipmentData.forEach((item) => {
     const tr = document.createElement("tr");
 
+    // 必須項目がすべて空ならスキップ（空行対策）
+    if (!item["商品名"] && !item["出荷先"] && !item["規格"] && !item["産地"]) {
+      pending--;
+      return;
+    }
+
     const requestBody = {
       product_name: item["商品名"],
       destination: item["出荷先"],
@@ -204,8 +210,22 @@
     })
     .catch(err => {
       console.error("照合エラー:", err);
+
+      const keys = ["商品名", "出荷先", "規格", "産地", "入数", "JANコード", "月", "火", "水", "木", "金", "土", "日"];
+      keys.forEach(k => {
+        const td = document.createElement("td");
+        td.textContent = item[k] || "";
+        tr.appendChild(td);
+      });
+
+      const tdName = document.createElement("td");
+      tdName.textContent = "照合エラー（データ不備の可能性）";
+      tdName.style.color = "red";
+      tr.appendChild(tdName);
+
       tr.classList.add("error-row");
       tbody.appendChild(tr);
+
       pending--;
       document.getElementById("registerBtn").disabled = true;
     });

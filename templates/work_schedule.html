@@ -162,6 +162,7 @@
     const typeSelect = document.getElementById("type");
     const productSelect = document.getElementById("product");
     const list = document.getElementById("schedule-list");
+    let checkedIds = new Set();
 
     async function fetchProducts() {
       const [semi, finished] = await Promise.all([
@@ -281,7 +282,7 @@ function updateSchedule(id, silent = false) {
       row.className = className;
 
       row.innerHTML = `
-        <td><input type="checkbox" class="schedule-checkbox" data-id="${item.id}"></td>
+        <td><input type="checkbox" class="schedule-checkbox" data-id="${item.id}" ${checkedIds.has(String(item.id)) ? "checked" : ""}></td>
         <td>${item.id}</td>
         <td>${item.product_type === 'semi' ? '半完成品' : '完成品'}</td>
         <td>${item.product_name || 'ID:' + item.product_id}</td>
@@ -334,11 +335,17 @@ async function printSchedule(id) {
 }
 
 function selectAll() {
-  document.querySelectorAll(".schedule-checkbox").forEach(cb => cb.checked = true);
+  document.querySelectorAll(".schedule-checkbox").forEach(cb => {
+    cb.checked = true;
+    checkedIds.add(cb.dataset.id);
+  });
 }
 
 function selectNone() {
-  document.querySelectorAll(".schedule-checkbox").forEach(cb => cb.checked = false);
+  document.querySelectorAll(".schedule-checkbox").forEach(cb => {
+    cb.checked = false;
+    checkedIds.delete(cb.dataset.id);
+  });
 }
 
 
@@ -446,6 +453,18 @@ async function bulkPrint() {
       await loadWorkers();
       await loadSchedules();
     };
+
+document.addEventListener("change", (e) => {
+  if (e.target.classList.contains("schedule-checkbox")) {
+    const id = e.target.dataset.id;
+    if (e.target.checked) {
+      checkedIds.add(id);
+    } else {
+      checkedIds.delete(id);
+    }
+  }
+});
+
   </script>
 </body>
 </html>
