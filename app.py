@@ -1291,6 +1291,9 @@ def arrival_logs_page():
 def setting_logs_page():
     return render_template("setting_logs.html")
 
+@app.route("/ping")
+def ping():
+    return "pong", 200
 
 
 
