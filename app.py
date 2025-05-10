@@ -1233,6 +1233,37 @@ def get_materials_by_category(category):
     return jsonify(materials)
 
 
+@app.route("/api/dispatch_logs", methods=["GET"])
+def get_dispatch_logs():
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT l.id, fp.destination, fp.product_name, fp.size, fp.origin,
+               l.quantity, l.comment, l.is_return, l.dispatched_at
+        FROM dispatch_logs l
+        JOIN finished_products fp ON l.product_id = fp.id
+        ORDER BY l.dispatched_at DESC
+    """)
+    logs = [
+        {
+            "id": row[0],
+            "name": f"{row[1]} / {row[2]} / {row[3]} / {row[4]}",
+            "quantity": row[5],
+            "comment": row[6],
+            "is_return": row[7],
+            "dispatched_at": row[8].isoformat()
+        } for row in cur.fetchall()
+    ]
+    cur.close()
+    conn.close()
+    return jsonify(logs)
+
+@app.route("/dispatch_logs")
+def dispatch_logs_page():
+    return render_template("dispatch_logs.html")
+
+
+
 
 
 @app.route("/inventory")

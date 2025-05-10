@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>蔵出しログ</title>
+  <style>
+    body { font-family: sans-serif; margin: 20px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 8px; border: 1px solid #ccc; text-align: left; }
+  </style>
+</head>
+<body>
+  <h1>蔵出しログ</h1>
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>製品名</th>
+        <th>数量</th>
+        <th>区分</th>
+        <th>コメント</th>
+        <th>日時</th>
+      </tr>
+    </thead>
+    <tbody id="log-table"></tbody>
+  </table>
+
+  <script>
+    fetch("/api/dispatch_logs")
+      .then(res => res.json())
+      .then(data => {
+        const tbody = document.getElementById("log-table");
+        data.forEach(log => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${log.id}</td>
+            <td>${log.name}</td>
+            <td>${log.quantity}</td>
+            <td>${log.is_return ? "戻し" : "蔵出し"}</td>
+            <td>${log.comment || ""}</td>
+            <td>${new Date(log.dispatched_at).toLocaleString("ja-JP")}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      });
+  </script>
+</body>
+</html>
