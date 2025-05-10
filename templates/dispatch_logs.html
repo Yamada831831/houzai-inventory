@@ -10,6 +10,18 @@
   </style>
 </head>
 <body>
+
+<!-- 1列目ナビ -->
+<nav class="top-nav">
+  <a href="/inventory">📦 在庫一覧</a>
+  <a href="/work_schedule">📝 作業予定</a>
+  <a href="/shipment">🚚 出荷予定</a>
+  <a href="/dispatch">📤 蔵出し</a>
+  <a href="/arrival">📥 包材入荷</a>
+  <a href="/stock_adjust">🧮 棚卸し</a>
+  <a href="/setting_logs">⚙️ 設定・ログ</a>
+</nav>
+
   <h1>蔵出しログ</h1>
   <table>
     <thead>
@@ -25,24 +37,34 @@
     <tbody id="log-table"></tbody>
   </table>
 
-  <script>
-    fetch("/api/dispatch_logs")
-      .then(res => res.json())
-      .then(data => {
-        const tbody = document.getElementById("log-table");
-        data.forEach(log => {
-          const tr = document.createElement("tr");
-          tr.innerHTML = `
-            <td>${log.id}</td>
-            <td>${log.name}</td>
-            <td>${log.quantity}</td>
-            <td>${log.is_return ? "戻し" : "蔵出し"}</td>
-            <td>${log.comment || ""}</td>
-            <td>${new Date(log.dispatched_at).toLocaleString("ja-JP")}</td>
-          `;
-          tbody.appendChild(tr);
-        });
+<script>
+  const jstFormatter = new Intl.DateTimeFormat("ja-JP", {
+    timeZone: "Asia/Tokyo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit"
+  });
+
+  fetch("/api/dispatch_logs")
+    .then(res => res.json())
+    .then(data => {
+      const tbody = document.getElementById("log-table");
+      data.forEach(log => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${log.id}</td>
+          <td>${log.name}</td>
+          <td>${log.quantity}</td>
+          <td>${log.is_return ? "戻し" : "蔵出し"}</td>
+          <td>${log.comment || ""}</td>
+          <td>${jstFormatter.format(new Date(log.dispatched_at))}</td>
+        `;
+        tbody.appendChild(tr);
       });
-  </script>
+    });
+</script>
 </body>
 </html>
