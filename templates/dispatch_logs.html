@@ -7,6 +7,21 @@
     body { font-family: sans-serif; margin: 20px; }
     table { width: 100%; border-collapse: collapse; }
     th, td { padding: 8px; border: 1px solid #ccc; text-align: left; }
+    nav.top-nav {
+      background-color: #f5f5f5;
+      padding: 10px 20px;
+      margin-bottom: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    nav.top-nav a {
+      text-decoration: none;
+      color: #333;
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
@@ -39,13 +54,13 @@
 
 <script>
   const jstFormatter = new Intl.DateTimeFormat("ja-JP", {
-    timeZone: "Asia/Tokyo",
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
-    second: "2-digit"
+    second: "2-digit",
+    timeZone: "Asia/Tokyo"
   });
 
   fetch("/api/dispatch_logs")
@@ -53,6 +68,10 @@
     .then(data => {
       const tbody = document.getElementById("log-table");
       data.forEach(log => {
+        // UTC→JST補正（+9時間）
+        const utcDate = new Date(log.dispatched_at);
+        const jstDate = new Date(utcDate.getTime() + 9 * 60 * 60 * 1000);
+
         const tr = document.createElement("tr");
         tr.innerHTML = `
           <td>${log.id}</td>
@@ -60,7 +79,7 @@
           <td>${log.quantity}</td>
           <td>${log.is_return ? "戻し" : "蔵出し"}</td>
           <td>${log.comment || ""}</td>
-          <td>${jstFormatter.format(new Date(log.dispatched_at))}</td>
+          <td>${jstFormatter.format(jstDate)}</td>
         `;
         tbody.appendChild(tr);
       });
