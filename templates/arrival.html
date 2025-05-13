@@ -101,7 +101,7 @@
     </div>
 
     <div style="flex-basis: 100%; display: flex; gap: 10px; align-items: center; margin-top: 10px;">
-      <label>入荷日:</label>
+      <label>入荷予定日:</label>
       <input type="date" id="arrivalDate">
 
       <label>数量:</label>
@@ -119,35 +119,37 @@
     <thead>
       <tr>
         <th>包材名</th>
-        <th>数量</th>
-        <th>入荷日</th>
+        <th>予定数量</th>
+        <th>予定日</th>
         <th>コメント</th>
+        <th>実数量</th>
+        <th>実入荷日</th>
         <th>操作</th>
       </tr>
     </thead>
     <tbody id="arrivalList"></tbody>
   </table>
 
-  <script>
-    let materials = [];
+ <script>
+let materials = [];
 
-    async function renderMaterialOptions() {
-      const res = await fetch("/api/materials");
-      materials = await res.json();
+async function renderMaterialOptions() {
+  const res = await fetch("/api/materials");
+  materials = await res.json();
 
-      const category = document.getElementById("category").value;
-      const select = document.getElementById("materialSelect");
-      select.innerHTML = "";
+  const category = document.getElementById("category").value;
+  const select = document.getElementById("materialSelect");
+  select.innerHTML = "";
 
-      materials
-        .filter(m => m.type === category)
-        .forEach(m => {
-          const option = document.createElement("option");
-          option.value = m.id;
-          option.textContent = m.name;
-          select.appendChild(option);
-        });
-    }
+  materials
+    .filter(m => m.type === category)
+    .forEach(m => {
+      const option = document.createElement("option");
+      option.value = m.id;
+      option.textContent = m.name;
+      select.appendChild(option);
+    });
+}
 
 async function loadArrivalList() {
   const res = await fetch("/api/arrival_schedules");
@@ -155,89 +157,126 @@ async function loadArrivalList() {
   const tbody = document.getElementById("arrivalList");
   tbody.innerHTML = "";
 
-  data.forEach(item => {
-    const arrivalDate = item.arrival_date
-      ? new Date(item.arrival_date).toLocaleDateString('ja-JP')
-      : "";
+  const today = new Date().toISOString().split("T")[0];
 
+  data.forEach(item => {
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${item.material_name}</td>
-      <td>${item.quantity} 枚</td>
-      <td>${arrivalDate}</td>
+      <td>${item.quantity}</td>
+      <td>${item.arrival_date ? new Date(item.arrival_date).toLocaleDateString("ja-JP") : ""}</td>
       <td>${item.comment || ""}</td>
-      <td><button onclick="completeArrival(${item.id}, ${item.quantity}, this)">入荷完了</button></td>
+      <td><input type="number" class="actual-qty" placeholder="未入力なら予定使用" min="1"></td>
+      <td><input type="date" class="actual-date" value="${today}"></td>
+      <td>
+        <button onclick="completeArrival(${item.id}, ${item.quantity}, this)">入荷完了</button>
+        <button onclick="deleteSchedule(${item.id}, this)">削除</button>
+      </td>
     `;
     tbody.appendChild(tr);
   });
 }
 
+async function addArrival() {
+  const materialId = document.getElementById("materialSelect").value;
+  const quantity = document.getElementById("quantity").value;
+  const arrivalDate = document.getElementById("arrivalDate").value;
+  const comment = document.getElementById("comment").value;
 
-    async function addArrival() {
-      const materialId = document.getElementById("materialSelect").value;
-      const quantity = document.getElementById("quantity").value;
-      const arrivalDate = document.getElementById("arrivalDate").value;
-      const comment = document.getElementById("comment").value;
-
-      if (!materialId || !quantity) {
-        alert("包材と数量は必須やで！");
-        return;
-      }
-
-      await fetch("/api/arrival_schedules", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          material_id: materialId,
-          quantity: quantity,
-          arrival_date: arrivalDate || null,
-          comment: comment
-        })
-      });
-
-      await loadArrivalList();
-      document.getElementById("quantity").value = "";
-      document.getElementById("arrivalDate").value = "";
-      document.getElementById("comment").value = "";
-    }
-
-async function completeArrival(scheduleId, quantity, btn) {
-  if (!confirm("本当に入荷完了しますか？")) {
-    return; // キャンセルなら何もせず終了
+  if (!materialId || !quantity) {
+    alert("包材と数量は必須です！");
+    return;
   }
 
-  const materialName = btn.parentNode.parentNode.children[0].textContent;
+  await fetch("/api/arrival_schedules", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      material_id: materialId,
+      quantity: quantity,
+      arrival_date: arrivalDate || null,
+      comment: comment
+    })
+  });
+
+  await loadArrivalList();
+  document.getElementById("quantity").value = "";
+  document.getElementById("arrivalDate").value = "";
+  document.getElementById("comment").value = "";
+}
+
+async function completeArrival(id, scheduledQty, btn) {
+  if (!confirm("入荷完了しますか？")) return;
+
+  const tr = btn.closest("tr");
+  const actualQty = tr.querySelector(".actual-qty").value || scheduledQty;
+  const actualDate = tr.querySelector(".actual-date").value;
+  const materialName = tr.children[0].textContent;
   const materialId = getMaterialIdByName(materialName);
 
-  // 在庫に反映
+  if (!actualQty || !actualDate) {
+    alert("実数量と実入荷日を確認してください！");
+    return;
+  }
+
   await fetch("/api/inventory/adjust", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       id: materialId,
       category: "material",
-      change: quantity,
+      change: actualQty,
       comment: "入荷完了"
     })
   });
 
-  // 予定削除
-  await fetch(`/api/arrival_schedules/${scheduleId}`, {
+  await fetch(`/api/arrival_schedules/${id}`, {
     method: "DELETE"
   });
 
   await loadArrivalList();
 }
 
-    function getMaterialIdByName(name) {
-      const material = materials.find(m => m.name === name);
-      return material ? material.id : null;
-    }
+async function saveSchedule(id, btn) {
+  const tr = btn.closest("tr");
+  const scheduledQty = tr.querySelector(".scheduled-qty").value;
+  const scheduledDate = tr.querySelector(".scheduled-date").value;
+  const comment = tr.querySelector(".scheduled-comment").value;
 
-    window.onload = async function() {
-      await renderMaterialOptions();
-      await loadArrivalList();
-    };
-  </script>
+  if (!scheduledQty || !scheduledDate) {
+    alert("予定数量と予定日は必須です！");
+    return;
+  }
+
+  await fetch(`/api/arrival_schedules/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      quantity: scheduledQty,
+      arrival_date: scheduledDate,
+      comment: comment
+    })
+  });
+
+  alert("保存しました！");
+}
+
+
+async function deleteSchedule(id, btn) {
+  if (!confirm("本当に削除しますか？")) return;
+  await fetch(`/api/arrival_schedules/${id}`, { method: "DELETE" });
+  btn.closest("tr").remove();
+}
+
+function getMaterialIdByName(name) {
+  const material = materials.find(m => m.name === name);
+  return material ? material.id : null;
+}
+
+window.onload = async function() {
+  await renderMaterialOptions();
+  await loadArrivalList();
+};
+</script>
 </body>
 </html>

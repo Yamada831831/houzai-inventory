@@ -68,6 +68,25 @@ def add_arrival_schedule():
     conn.close()
     return jsonify({"message": "入荷予定を追加しました"}), 201
 
+@app.route("/api/arrival_schedules/<int:id>", methods=["PATCH"])
+def update_arrival_schedule(id):
+    data = request.json
+    arrival_date = data.get("arrival_date")
+    quantity = data.get("quantity")
+
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        UPDATE material_arrival_schedules
+        SET arrival_date = %s, quantity = %s
+        WHERE id = %s
+    """, (arrival_date, quantity, id))
+    conn.commit()
+    cur.close()
+    conn.close()
+    return jsonify({"message": "入荷予定を更新しました"}), 200
+
+
 
 # 入荷予定を削除（完了 or キャンセル）
 @app.route("/api/arrival_schedules/<int:id>", methods=["DELETE"])
