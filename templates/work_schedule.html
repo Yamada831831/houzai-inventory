@@ -167,7 +167,7 @@
     async function fetchProducts() {
       const [semi, finished] = await Promise.all([
         fetch("/api/semi_products").then(res => res.json()),
-        fetch("/api/finished_products").then(res => res.json())
+        fetch("/api/finished_products/active_only").then(res => res.json())
       ]);
       return { semi, finished };
     }

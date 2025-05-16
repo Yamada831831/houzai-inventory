@@ -458,6 +458,43 @@ def get_finished_products():
     } for r in rows
 ])
 
+@app.route("/api/finished_products/active_only", methods=["GET"])
+def get_active_finished_products():
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT fp.id, fp.destination, fp.product_name, fp.size, fp.origin,
+               m.name AS seal_name,
+               sm1.name AS label_name,
+               sm2.name AS bag_name,
+               fp.is_active,
+               fp.created_at
+        FROM finished_products fp
+        JOIN materials m ON fp.seal_material_id = m.id
+        JOIN semi_products sp ON fp.semi_product_id = sp.id
+        JOIN materials sm1 ON sp.label_material_id = sm1.id
+        JOIN materials sm2 ON sp.bag_material_id = sm2.id
+        WHERE fp.is_active = TRUE
+        ORDER BY fp.created_at;
+    """)
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return jsonify([
+        {
+            "id": r[0],
+            "destination": r[1],
+            "product_name": r[2],
+            "size": r[3],
+            "origin": r[4],
+            "seal_name": r[5],
+            "label_name": r[6],
+            "bag_name": r[7],
+            "is_active": r[8],
+            "created_at": r[9].strftime("%Y-%m-%d")
+        } for r in rows
+    ])
+
 
 
 # 無効化 / 有効化
