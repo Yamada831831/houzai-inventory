@@ -84,7 +84,16 @@
 <!-- 完成品マスタ一覧 -->
 <table>
 <thead>
-<tr><th>出荷先</th><th>商品名</th><th>規格</th><th>産地</th><th>裏シール名</th><th>半完成品</th><th>登録日</th><th>操作</th></tr>
+  <tr>
+    <th data-key="destination"  data-type="string">出荷先</th>
+    <th data-key="product_name" data-type="string">商品名</th>
+    <th data-key="size"         data-type="string">規格</th>
+    <th data-key="origin"       data-type="string">産地</th>
+    <th data-key="seal_name"    data-type="string">裏シール名</th>
+    <th data-key="label_bag"    data-type="string">半完成品</th>
+    <th data-key="created_at"   data-type="date">登録日</th>
+    <th>操作</th>
+  </tr>
 </thead>
 <tbody id="master-list"></tbody>
 </table>
