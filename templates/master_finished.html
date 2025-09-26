@@ -50,6 +50,9 @@
       background-color: #f0f0f0;
       color: #aaa;
     }
+    th[data-key] { cursor: pointer; user-select: none; }
+    th.sort-asc::after  { content: " ▲"; }
+    th.sort-desc::after { content: " ▼"; }
   </style>
 </head>
 <body>
@@ -155,31 +158,87 @@
       });
   }
 
-  // 完成品一覧表示
+  // ▼ 並べ替え用の状態
+  let finishedProducts = [];
+  const sortState = { key: 'created_at', type: 'date', dir: 'desc' };
+
+  // ▼ 比較関数
+  const collator = new Intl.Collator('ja', { numeric: true, sensitivity: 'base' });
+  function getVal(p, key, type) {
+    let v = p[key];
+    if (key === 'label_bag') v = `${p.label_name} + ${p.bag_name}`;
+    if (type === 'number') return Number(v ?? 0);
+    if (type === 'date')   return v ? new Date(v).getTime() : 0;
+    return (v ?? '').toString();
+  }
+  function applySort(arr) {
+    const { key, type, dir } = sortState;
+    const mul = dir === 'asc' ? 1 : -1;
+    return [...arr].sort((a,b) => {
+      const va = getVal(a, key, type);
+      const vb = getVal(b, key, type);
+      if (type === 'string') return collator.compare(va, vb) * mul;
+      return (va < vb ? -1 : va > vb ? 1 : 0) * mul;
+    });
+  }
+
+  // ▼ テーブル再描画
+  function renderTable() {
+    const list = document.getElementById("master-list");
+    list.innerHTML = "";
+    const data = applySort(finishedProducts);
+
+    data.forEach(p => {
+      const row = document.createElement("tr");
+      if (!p.is_active) row.classList.add("inactive");
+      const labelBag = `${p.label_name} + ${p.bag_name}`;
+      row.innerHTML = `
+        <td>${p.destination ?? ''}</td>
+        <td>${p.product_name ?? ''}</td>
+        <td>${p.size ?? ''}</td>
+        <td>${p.origin ?? ''}</td>
+        <td>${p.seal_name ?? ''}</td>
+        <td>${labelBag}</td>
+        <td>${p.created_at ?? ''}</td>
+        <td>
+          <button onclick="toggleProduct(${p.id})">${p.is_active ? '無効化' : '有効化'}</button>
+          <button onclick="deleteProduct(${p.id})" class="delete-btn">削除</button>
+        </td>
+      `;
+      list.appendChild(row);
+    });
+
+    // ヘッダの▲▼表示更新
+    document.querySelectorAll('thead th').forEach(th => th.classList.remove('sort-asc','sort-desc'));
+    const activeTh = document.querySelector(`thead th[data-key="${sortState.key}"]`);
+    if (activeTh) activeTh.classList.add(sortState.dir === 'asc' ? 'sort-asc' : 'sort-desc');
+  }
+
+  // ▼ クリックでソート切り替え
+  function bindHeaderSort() {
+    document.querySelectorAll('thead th[data-key]').forEach(th => {
+      th.addEventListener('click', () => {
+        const key = th.dataset.key;
+        const type = th.dataset.type || 'string';
+        if (sortState.key === key) {
+          sortState.dir = (sortState.dir === 'asc') ? 'desc' : 'asc';
+        } else {
+          sortState.key = key;
+          sortState.type = type;
+          sortState.dir = 'asc';
+        }
+        renderTable();
+      });
+    });
+  }
+
+  // ▼ 完成品一覧ロード（配列を保持してから描画）
   function loadFinishedProducts() {
     fetch("/api/finished_products")
       .then(res => res.json())
       .then(data => {
-        const list = document.getElementById("master-list");
-        list.innerHTML = "";
-        data.forEach(p => {
-          const row = document.createElement("tr");
-          if (!p.is_active) row.classList.add("inactive");
-          row.innerHTML = `
-  <td>${p.destination}</td>
-  <td>${p.product_name}</td>
-  <td>${p.size}</td>
-  <td>${p.origin}</td>
-  <td>${p.seal_name}</td>
-  <td>${p.label_name} + ${p.bag_name}</td>
-  <td>${p.created_at}</td>  <!-- ここ！ -->
-  <td>
-    <button onclick="toggleProduct(${p.id})">${p.is_active ? '無効化' : '有効化'}</button>
-    <button onclick="deleteProduct(${p.id})" class="delete-btn">削除</button>
-  </td>
-`;
-          list.appendChild(row);
-        });
+        finishedProducts = data;
+        renderTable();
       });
   }
 
@@ -200,6 +259,7 @@
 
   window.onload = () => {
     loadMaterialsAndSemi();
+    bindHeaderSort();        // ← 追加
     loadFinishedProducts();
   };
 </script>
