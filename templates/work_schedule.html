@@ -181,7 +181,8 @@
 　　let workers = [];
 async function loadWorkers() {
   const res = await fetch("/api/workers");
-  workers = await res.json();
+  const allWorkers = await res.json(); // ← 一時変数で受ける
+  workers = allWorkers.filter(w => w.is_active); // ← ここで絞る
 
   // 登録フォームの <select id="worker"> にセット
   const workerSelect = document.getElementById("worker");
