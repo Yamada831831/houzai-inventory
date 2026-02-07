@@ -5,6 +5,7 @@ import os
 from dotenv import load_dotenv
 from datetime import timedelta
 import datetime
+import pandas
 
 
 load_dotenv()  # .env読み込み
@@ -1318,6 +1319,47 @@ def get_dispatch_logs():
 def dispatch_logs_page():
     return render_template("dispatch_logs.html")
 
+@app.get("/export/material_usage_semi.csv")
+def export_material_usage_semi_csv():
+
+    sql = """
+    SELECT
+      date(wl.completed_at) AS use_date,
+      m.id                 AS material_id,
+      m.type               AS material_type,
+      m.name               AS material_name,
+      wl.quantity          AS used_qty
+    FROM work_logs wl
+    JOIN semi_products sp ON sp.id = wl.product_id
+    JOIN materials m      ON m.id = sp.bag_material_id
+    WHERE wl.product_type = 'semi'
+
+    UNION ALL
+
+    SELECT
+      date(wl.completed_at) AS use_date,
+      m.id                 AS material_id,
+      m.type               AS material_type,
+      m.name               AS material_name,
+      wl.quantity          AS used_qty
+    FROM work_logs wl
+    JOIN semi_products sp ON sp.id = wl.product_id
+    JOIN materials m      ON m.id = sp.label_material_id
+    WHERE wl.product_type = 'semi'
+
+    ORDER BY use_date, material_id;
+    """
+
+    df = pd.read_sql_query(sql, engine)
+
+    return Response(
+        df.to_csv(index=False),
+        mimetype="text/csv; charset=utf-8",
+        headers={
+            "Content-Disposition": "attachment; filename=material_usage_semi.csv",
+            "Cache-Control": "no-store",
+        },
+    )
 
 
 
