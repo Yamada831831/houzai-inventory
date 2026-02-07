@@ -5,7 +5,6 @@ import os
 from dotenv import load_dotenv
 from datetime import timedelta
 import datetime
-import pandas
 
 
 load_dotenv()  # .env読み込み
@@ -1350,10 +1349,26 @@ def export_material_usage_semi_csv():
     ORDER BY use_date, material_id;
     """
 
-    df = pd.read_sql_query(sql, engine)
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute(sql)
+    rows = cur.fetchall()
+
+    # ヘッダ
+    columns = ["use_date", "material_id", "material_type", "material_name", "used_qty"]
+
+    # CSV文字列を自前で作る（pandas不要）
+    lines = [",".join(columns)]
+    for r in rows:
+        lines.append(",".join([str(x) for x in r]))
+
+    cur.close()
+    conn.close()
+
+    csv_text = "\n".join(lines)
 
     return Response(
-        df.to_csv(index=False),
+        csv_text,
         mimetype="text/csv; charset=utf-8",
         headers={
             "Content-Disposition": "attachment; filename=material_usage_semi.csv",
