@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, Response
 from flask_cors import CORS
 import psycopg2
 import os
@@ -1320,7 +1320,6 @@ def dispatch_logs_page():
 
 @app.get("/export/material_usage_semi.csv")
 def export_material_usage_semi_csv():
-
     sql = """
     SELECT
       date(wl.completed_at) AS use_date,
@@ -1353,29 +1352,23 @@ def export_material_usage_semi_csv():
     cur = conn.cursor()
     cur.execute(sql)
     rows = cur.fetchall()
-
-    # ヘッダ
-    columns = ["use_date", "material_id", "material_type", "material_name", "used_qty"]
-
-    # CSV文字列を自前で作る（pandas不要）
-    lines = [",".join(columns)]
-    for r in rows:
-        lines.append(",".join([str(x) for x in r]))
-
     cur.close()
     conn.close()
 
-    csv_text = "\n".join(lines)
+    import io, csv
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(["use_date", "material_id", "material_type", "material_name", "used_qty"])
+    w.writerows(rows)
 
     return Response(
-        csv_text,
+        buf.getvalue(),
         mimetype="text/csv; charset=utf-8",
         headers={
             "Content-Disposition": "attachment; filename=material_usage_semi.csv",
             "Cache-Control": "no-store",
         },
     )
-
 
 
 
